@@ -31,9 +31,9 @@ public class UploadService : IUploadService
         if (file.Length > maxFileSize)
             throw new Exception("File size exceeds the maximum limit of 5 MB.");
 
-        var uploadsFolder = Path.Combine(_environment.WebRootPath, "images");
-        if (!Directory.Exists(uploadsFolder))
-            Directory.CreateDirectory(uploadsFolder);
+        var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+        var uploadsFolder = Path.Combine(webRoot, "images");
+        Directory.CreateDirectory(uploadsFolder);
 
         var uniqueFileName = Guid.NewGuid().ToString("N") + extension;
         var filePath = Path.Combine(uploadsFolder, uniqueFileName);
@@ -49,7 +49,8 @@ public class UploadService : IUploadService
     public FileDownloadResponse DownloadFile(string fileName)
     {
         var safeFileName = Path.GetFileName(fileName);
-        var filePath = Path.Combine(_environment.WebRootPath, "images", safeFileName);
+        var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+        var filePath = Path.Combine(webRoot, "images", safeFileName);
 
         if (!File.Exists(filePath))
             throw new FileNotFoundException("File not found.");

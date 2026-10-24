@@ -61,9 +61,16 @@ public class CategoryController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var result = await _categoryService.DeleteAsync(id);
-        if (!result) return NotFound();
+        try
+        {
+            var result = await _categoryService.DeleteAsync(id);
+            if (!result) return NotFound();
 
-        return NoContent();
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.BadRequestResponse(ex.Message));
+        }
     }
 }

@@ -173,7 +173,7 @@ public class PostService : IPostService
                 Id = m.Id,
                 Url = PublicHelperShared.IsGuidFileName(m.Url)
                     ? $"{baseUrl}/api/Upload/download/{m.Url}"
-                    : m.Url,
+                    : m.Url ?? string.Empty,
                 MediaType = m.MediaType
             }).ToList()
         };

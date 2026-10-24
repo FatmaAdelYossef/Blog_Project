@@ -49,8 +49,6 @@ export default function ResetPassword() {
 
     try {
       await authService.resetPassword(resetPasswordDto);
-      
-      console.log('Reset Password Payload:', resetPasswordDto); 
       setSuccess(true);
       
       setTimeout(() => {

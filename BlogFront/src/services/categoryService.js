@@ -20,7 +20,7 @@ export const categoryService = {
     },
 
     update: async (id, categoryData) => {
-        const response = await axiosInstance.put(`${API_ENDPOINTS.CATEGORY.BASE}/${id}`, categoryData);
+        const response = await axiosInstance.put(`${API_ENDPOINTS.CATEGORY.BASE}/${id}`, { id, ...categoryData });
         return response.data;
     },
 

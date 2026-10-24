@@ -11,8 +11,15 @@ export const jwtService = {
   },
 
   isTokenExpired: (token) => {
-    const decoded = jwtDecode(token);
-    const currentTime = Date.now() / 1000;
-    return decoded.exp < currentTime;
+    try {
+      const decoded = jwtDecode(token);
+      if (!decoded || typeof decoded.exp !== 'number') {
+        return true;
+      }
+      const currentTime = Date.now() / 1000;
+      return decoded.exp < currentTime;
+    } catch {
+      return true;
+    }
   }
 };

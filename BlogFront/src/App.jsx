@@ -28,10 +28,13 @@ function App() {
             <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
           </Route>
 
-          {/* 2. All Main Routes are now Publicly Accessible inside DashboardLayout */}
+          {/* 2. All main routes are public inside DashboardLayout. Change
+              password is nested under AuthGuard because it needs a session. */}
           <Route element={<DashboardLayout />}>
             <Route path={ROUTES.HOME} element={<Dashboard />} />
-            <Route path={ROUTES.CHANGE_PASSWORD} element={<ChangePassword />} />
+            <Route element={<AuthGuard />}>
+              <Route path={ROUTES.CHANGE_PASSWORD} element={<ChangePassword />} />
+            </Route>
             <Route path={ROUTES.POSTS} element={<PostsPage />} />
             <Route path="/posts/:id" element={<PostDetailsPage />} />
             <Route path={ROUTES.CATEGORIES} element={<CategoriesPage />} />

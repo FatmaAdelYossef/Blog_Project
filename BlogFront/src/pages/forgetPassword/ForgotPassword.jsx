@@ -1,9 +1,9 @@
-
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
-import { ROUTES } from '../../config/routes';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
+import { ROUTES } from '../../config/routes';
+import { AuthShell } from '../../components/layout/AuthShell';
+import { Alert, Button, Input } from '../../components/ui';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -12,84 +12,88 @@ export default function ForgotPassword() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
     setLoading(true);
 
     try {
       await authService.forgotPassword({ Email: email });
       setIsSubmitted(true);
-    } catch (err) {
-      setError('Failed to send reset email. Please check your email address.');
+    } catch {
+      setError('We could not send the reset email. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
-        
-        <div className="flex items-center mb-6">
-          <button
-            onClick={() => navigate(ROUTES.LOGIN)}
-            className="text-gray-400 hover:text-gray-600 transition-colors mr-2"
+    <AuthShell
+      title={isSubmitted ? 'Check your inbox' : 'Reset your password'}
+      description={
+        isSubmitted
+          ? 'If the address matches an account, a recovery link is on its way.'
+          : 'Enter the email address you use to sign in and we will send recovery instructions.'
+      }
+      footer={
+        <p>
+          Remembered it?{' '}
+          <Link
+            to={ROUTES.LOGIN}
+            className="font-medium text-accent underline-offset-4 hover:underline"
           >
-            <ArrowLeft size={20} />
-          </button>
-          <h2 className="text-2xl font-bold text-gray-800">Forgot Password</h2>
+            Back to sign in
+          </Link>
+        </p>
+      }
+    >
+      {isSubmitted ? (
+        <div className="space-y-5">
+          <Alert variant="success" title="Recovery email sent">
+            If an account exists for <span className="font-medium text-ink">{email}</span>, the
+            reset link is on its way.
+          </Alert>
+
+          <p className="text-sm leading-relaxed text-ink-muted">
+            The link is time-limited for your protection. If it does not arrive, check your spam
+            folder or request a new one.
+          </p>
+
+          <Button
+            variant="secondary"
+            size="lg"
+            className="w-full"
+            onClick={() => navigate(ROUTES.LOGIN)}
+          >
+            Back to sign in
+          </Button>
         </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Input
+            label="Email address"
+            type="email"
+            name="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
 
-        {!isSubmitted ? (
-          <>
-            <p className="text-gray-500 mb-6 text-sm">
-              Enter your email address and we'll send you instructions to reset your password.
-            </p>
+          {error ? <Alert variant="danger">{error}</Alert> : null}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-              <button
-                disabled={loading}
-                type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center shadow-md hover:shadow-lg"
-              >
-                {loading ? <Loader2 className="animate-spin" size={20} /> : "Send Reset Instructions"}
-              </button>
-            </form>
-          </>
-        ) : (
-          <div className="text-center py-6 space-y-4">
-            <div className="flex justify-center text-green-500">
-              <CheckCircle2 size={56} />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800">Check your email</h3>
-            <p className="text-gray-500 text-sm">
-              We have sent password recovery instructions to <span className="font-semibold text-gray-700">{email}</span>.
-            </p>
-            <button
-              onClick={() => navigate(ROUTES.LOGIN)}
-              className="mt-4 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold transition-all"
-            >
-              Back to Login
-            </button>
-          </div>
-        )}
-
-      </div>
-    </div>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            loading={loading}
+            loadingLabel="Sending instructions"
+          >
+            Send reset instructions
+          </Button>
+        </form>
+      )}
+    </AuthShell>
   );
 }

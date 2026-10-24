@@ -1,9 +1,9 @@
-
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../config/routes';
+import { AuthShell } from '../../components/layout/AuthShell';
+import { Alert, Button, Input } from '../../components/ui';
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -12,14 +12,19 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleChange = (field) => (event) => {
+    setFormData((current) => ({ ...current, [field]: event.target.value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
     setError('');
+
     try {
       await login(formData);
       navigate(ROUTES.HOME);
-    } catch (err) {
+    } catch {
       setError('Invalid email or password.');
     } finally {
       setLoading(false);
@@ -27,55 +32,56 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
-          <p className="text-gray-500">Please sign in to your account</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="relative">
-            <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
-            <input
-              type="email"
-              placeholder="Email Address"
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              required
-            />
-          </div>
-
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-            <input
-              type="password"
-              placeholder="Password"
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              required
-            />
-          </div>
-
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-          <button
-            disabled={loading}
-            type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center"
+    <AuthShell
+      title="Welcome back"
+      description="Sign in to write, edit, and organize your posts."
+      footer={
+        <p>
+          Forgot your password?{' '}
+          <Link
+            to={ROUTES.FORGOT_PASSWORD}
+            className="font-medium text-accent underline-offset-4 hover:underline"
           >
-            {loading ? <Loader2 className="animate-spin" /> : "Sign In"}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <Link to={ROUTES.FORGOT_PASSWORD} className="hover:text-indigo-600 transition-colors">
-            Forgot Password?
+            Reset it
           </Link>
-        </div>
-      </div>
-    </div>
+        </p>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Input
+          label="Email address"
+          type="email"
+          name="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          value={formData.email}
+          onChange={handleChange('email')}
+          required
+        />
+
+        <Input
+          label="Password"
+          type="password"
+          name="password"
+          autoComplete="current-password"
+          placeholder="Your password"
+          value={formData.password}
+          onChange={handleChange('password')}
+          required
+        />
+
+        {error ? <Alert variant="danger">{error}</Alert> : null}
+
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          loading={loading}
+          loadingLabel="Signing in"
+        >
+          Sign in
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

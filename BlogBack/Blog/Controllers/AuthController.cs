@@ -1,6 +1,7 @@
 ﻿using BusinessLogicLayer.Services.Auth;
 using DataAccessLayer.DTOs.Response;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +21,7 @@ public class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
@@ -52,15 +54,16 @@ public class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
         try
         {
-            var result = await _authService.ForgotPasswordAsync(dto);
-            if (!result) return NotFound(ApiResponse.NotFoundResponse("User not found or email error."));
-
-            return Ok(ApiResponse.SuccessResponse("Reset token sent to your email."));
+            // Always return the same response regardless of whether the account exists,
+            // to prevent email enumeration. Infrastructure failures are not masked.
+            await _authService.ForgotPasswordAsync(dto);
+            return Ok(ApiResponse.SuccessResponse("If the email exists, a reset link has been sent."));
         }
         catch (Exception ex)
         {
@@ -69,6 +72,7 @@ public class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {

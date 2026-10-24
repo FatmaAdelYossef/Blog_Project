@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Loader2 } from 'lucide-react';
-import { authService } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../config/routes';
 
 export default function Login() {
@@ -10,13 +10,14 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      await authService.login(formData);
+      await login(formData);
       navigate(ROUTES.HOME);
     } catch (err) {
       setError('Invalid email or password.');

@@ -1,13 +1,14 @@
 
 import axiosInstance from './axiosConfig';
 import API_ENDPOINTS from '../config/apiEndpoints';
+import { clearToken, setToken } from '../lib/tokenStorage';
 
 export const authService = {
 
     login: async (credentials) => {
         const response = await axiosInstance.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
         if (response.data.data) {
-            localStorage.setItem('token', response.data.data);
+            setToken(response.data.data);
         }
         return response.data;
     },
@@ -28,7 +29,7 @@ export const authService = {
     },
 
     logout: async () => {
-        localStorage.clear();
+        clearToken();
     }
 
 };

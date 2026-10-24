@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { LayoutDashboard, LogOut, Key, User, ChevronDown, FileText, LogIn, Menu, X } from 'lucide-react';
 import { useNavigate, Outlet, Link } from 'react-router-dom';
-import { authService } from '../../services/authService';
-import { jwtService } from '../../services/jwtService';
+import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../config/routes';
 
 export default function DashboardLayout() {
@@ -10,15 +9,10 @@ export default function DashboardLayout() {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const dropdownRef = useRef(null);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token && !jwtService.isTokenExpired(token)) setIsAuthenticated(true);
-    }, []);
+    const { isAuthenticated, logout } = useAuth();
 
     const handleLogout = async () => {
-        await authService.logout();
+        await logout();
         navigate(ROUTES.LOGIN);
     };
 

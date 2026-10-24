@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessLogicLayer.Services.Authorization;
 using DataAccessLayer.Context;
 using DataAccessLayer.DTOs.Medias;
 using DataAccessLayer.DTOs.Pagenation;
@@ -26,12 +27,17 @@ public class PostService : IPostService
 
     public async Task<PostResponseDto> CreatePostAsync(CreatePostDto dto)
     {
+        var authorId = PostAccess.GetUserId(_httpContextAccessor.HttpContext?.User);
+        if (string.IsNullOrEmpty(authorId))
+            throw new UnauthorizedAccessException("Authentication is required.");
+
         var post = new DataAccessLayer.Models.Post
         {
             Title = dto.Title,
             Content = dto.Content,
             CreatedAt = DateTime.UtcNow,
             CategoryId = dto.CategoryId,
+            AuthorId = authorId,
             Medias = dto.Medias.Select(m => new DataAccessLayer.Models.Media
             {
                 Url = m.Url,
@@ -110,6 +116,8 @@ public class PostService : IPostService
         if (post == null)
             return null;
 
+        PostAccess.EnsureCanModify(_httpContextAccessor.HttpContext?.User, post.AuthorId);
+
         post.Title = dto.Title;
         post.Content = dto.Content;
         post.CategoryId = dto.CategoryId.HasValue ? dto.CategoryId.Value : post.CategoryId;
@@ -129,6 +137,8 @@ public class PostService : IPostService
         var post = await _context.Posts.FindAsync(id);
         if (post == null)
             return false;
+
+        PostAccess.EnsureCanModify(_httpContextAccessor.HttpContext?.User, post.AuthorId);
 
         _context.Posts.Remove(post);
         await _context.SaveChangesAsync();
@@ -154,6 +164,7 @@ public class PostService : IPostService
             Id = post.Id,
             CategoryId = post.CategoryId,
             CategoryName = categoryName,
+            AuthorId = post.AuthorId,
             Title = post.Title,
             Content = post.Content,
             CreatedAt = post.CreatedAt,

@@ -43,7 +43,7 @@ public class AuthService : IAuthService
             throw new Exception("Invalid email or password.");
         }
 
-        var token = _jwtService.GenerateToken(user);
+        var token = _jwtService.GenerateToken(user, await _userManager.GetRolesAsync(user));
         return token;
     }
 

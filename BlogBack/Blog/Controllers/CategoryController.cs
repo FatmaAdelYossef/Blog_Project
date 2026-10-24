@@ -4,6 +4,7 @@ using DataAccessLayer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SharedLayer;
 
 namespace Blog.Controllers;
 
@@ -38,6 +39,7 @@ public class CategoryController : ControllerBase
     }
 
     // POST: api/category
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost]
     public async Task<ActionResult<Category>> Create(Category category)
     {
@@ -46,6 +48,7 @@ public class CategoryController : ControllerBase
     }
 
     // PUT: api/category/5
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Category category)
     {
@@ -58,6 +61,7 @@ public class CategoryController : ControllerBase
     }
 
     // DELETE: api/category/5
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

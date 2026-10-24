@@ -43,13 +43,22 @@ public class PostsController : ControllerBase
         return Ok(ApiResponse<object>.SuccessResult(post));
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<IActionResult> CreatePost([FromBody] CreatePostDto dto)
     {
-        var createdPost = await _postService.CreatePostAsync(dto);
-        return CreatedAtAction(nameof(GetPostById), new { id = createdPost.Id }, createdPost);
+        try
+        {
+            var createdPost = await _postService.CreatePostAsync(dto);
+            return CreatedAtAction(nameof(GetPostById), new { id = createdPost.Id }, createdPost);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
+    [Authorize]
     [HttpPost("{postId}/media")]
     public async Task<IActionResult> AddMediaToPost(int postId, [FromBody] CreateMediaDto dto)
     {
@@ -58,50 +67,86 @@ public class PostsController : ControllerBase
             var media = await _mediaService.AddMediaToPostAsync(postId, dto);
             return Ok(ApiResponse<object>.SuccessResult(media));
         }
-        catch (Exception ex)
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
     }
 
+    [Authorize]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdatePost(int id, [FromBody] UpdatePostDto dto)
     {
-        var updatedPost = await _postService.UpdatePostAsync(id, dto);
-        if (updatedPost == null)
-            return NotFound(new { message = "Post not found" });
+        try
+        {
+            var updatedPost = await _postService.UpdatePostAsync(id, dto);
+            if (updatedPost == null)
+                return NotFound(new { message = "Post not found" });
 
-        return Ok(ApiResponse<object>.SuccessResult(updatedPost));
+            return Ok(ApiResponse<object>.SuccessResult(updatedPost));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
+    [Authorize]
     [HttpPut("Media/{mediaId}")]
     public async Task<IActionResult> UpdateMedia(int mediaId, [FromBody] CreateMediaDto dto)
     {
-        var updatedPost = await _mediaService.UpdateMediaAsync(mediaId, dto);
-        if (!updatedPost)
-            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to update media");
+        try
+        {
+            var updatedPost = await _mediaService.UpdateMediaAsync(mediaId, dto);
+            if (!updatedPost)
+                return StatusCode(StatusCodes.Status500InternalServerError, "Failed to update media");
 
-        return Ok(ApiResponse<object>.SuccessResult(updatedPost));
+            return Ok(ApiResponse<object>.SuccessResult(updatedPost));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
+    [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeletePost(int id)
     {
-        var deleted = await _postService.DeletePostAsync(id);
-        if (!deleted)
-            return NotFound(new { message = "Post not found" });
+        try
+        {
+            var deleted = await _postService.DeletePostAsync(id);
+            if (!deleted)
+                return NotFound(new { message = "Post not found" });
 
-        return Ok(ApiResponse.SuccessResponse("Post deleted successfully"));
+            return Ok(ApiResponse.SuccessResponse("Post deleted successfully"));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
+    [Authorize]
     [HttpDelete("Media/{id}")]
     public async Task<IActionResult> DeleteMedia(int id)
     {
-        var deleted = await _mediaService.DeleteMediaAsync(id);
-        if (!deleted)
-            return NotFound(new { message = "Media not found" });
+        try
+        {
+            var deleted = await _mediaService.DeleteMediaAsync(id);
+            if (!deleted)
+                return NotFound(new { message = "Media not found" });
 
-        return Ok(ApiResponse.SuccessResponse("Media deleted successfully"));
+            return Ok(ApiResponse.SuccessResponse("Media deleted successfully"));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
 

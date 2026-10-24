@@ -12,6 +12,7 @@ public static class MainSeeder
 {
     private static readonly List<ISeeder> _seeders = new()
     {
+        new RoleSeeder(),
         new UserSeeder(),
         new BlogSeeder()
     };

@@ -11,10 +11,12 @@ namespace Blog.Controllers;
 public class UploadController : ControllerBase
 {
     private readonly IUploadService _uploadService;
+    private readonly ILogger<UploadController> _logger;
 
-    public UploadController(IUploadService uploadService)
+    public UploadController(IUploadService uploadService, ILogger<UploadController> logger)
     {
         _uploadService = uploadService;
+        _logger = logger;
     }
 
     [HttpPost("image")]
@@ -33,9 +35,14 @@ public class UploadController : ControllerBase
                 fileName = uniqueFileName,
             }));
         }
-        catch (Exception ex)
+        catch (InvalidImageException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while uploading an image.");
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An unexpected error occurred while uploading the image." });
         }
     }
 
@@ -55,7 +62,8 @@ public class UploadController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { message = ex.Message });
+            _logger.LogError(ex, "Unexpected error while downloading an image.");
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An unexpected error occurred while downloading the image." });
         }
     }
 

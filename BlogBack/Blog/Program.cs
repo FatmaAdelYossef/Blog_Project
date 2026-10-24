@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Threading.RateLimiting;
 using BusinessLogicLayer.Services;
 using BusinessLogicLayer.Services.JWT;
 using DataAccessLayer.Context;
@@ -8,6 +9,7 @@ using DataAccessLayer.Seeders;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -74,13 +76,35 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
+// rate limiting for anonymous authentication endpoints
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("auth", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
+
 // cors
+var frontendOrigin = builder.Configuration["Frontend:Origin"];
+if (string.IsNullOrWhiteSpace(frontendOrigin))
+{
+    frontendOrigin = "http://localhost:5173";
+}
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
+    options.AddPolicy("Frontend",
         policy =>
         {
-            policy.AllowAnyOrigin()
+            policy.WithOrigins(frontendOrigin)
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
@@ -137,7 +161,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+app.UseCors("Frontend");
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

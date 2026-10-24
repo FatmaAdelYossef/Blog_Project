@@ -5,7 +5,9 @@ using System.Threading.Tasks;
 using DataAccessLayer.Models;
 using DataAccessLayer.Seeders.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace DataAccessLayer.Seeders.Classes;
 
@@ -19,6 +21,15 @@ public class UserSeeder : ISeeder
     public async Task SeedAsync(IServiceProvider services)
     {
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var logger = services.GetRequiredService<ILogger<UserSeeder>>();
+
+        var defaultPassword = configuration["Seed:DefaultPassword"];
+        if (string.IsNullOrWhiteSpace(defaultPassword))
+        {
+            logger.LogWarning("Seed:DefaultPassword is not configured. Skipping default user seeding.");
+            return;
+        }
 
         var usersInfoList = new List<UserSeederInfo>
         {
@@ -30,7 +41,7 @@ public class UserSeeder : ISeeder
                 FirstName = "Yousef",
                 LastName = "Mohamed",
                 BirthDate = new DateTime(2003, 3, 20),
-                Password = "22"
+                Password = defaultPassword
             },
             new()
             {
@@ -40,7 +51,7 @@ public class UserSeeder : ISeeder
                 FirstName = "Fatma",
                 LastName = "Adel",
                 BirthDate = new DateTime(2001, 7, 12),
-                Password = "22"
+                Password = defaultPassword
             }
         };
 

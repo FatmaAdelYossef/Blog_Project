@@ -4,9 +4,14 @@ import { ROUTES } from '../config/routes';
 import { jwtService } from '../services/jwtService';
 
 export const AuthGuard = ({ isPublicOnly }) => {
-    const token = localStorage.getItem('token');
+    let token = null;
+    try {
+        token = localStorage.getItem('token');
+    } catch {
+        token = null;
+    }
 
-    const isValid = token && !jwtService.isTokenExpired(token);
+    const isValid = Boolean(token) && !jwtService.isTokenExpired(token);
 
     if (isPublicOnly && isValid) {
         return <Navigate to={ROUTES.HOME} />;

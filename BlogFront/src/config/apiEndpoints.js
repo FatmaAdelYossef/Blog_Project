@@ -1,8 +1,6 @@
 // apiEndpoints.js
 
-const BASE_URL = import.meta.env.MODE === 'production'
-  ? 'https://api.yourdomain.com/api'
-  : 'https://localhost:7034/api';
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://localhost:7034/api').replace(/\/$/, '');
 
 export const API_ENDPOINTS = {
   AUTH: {

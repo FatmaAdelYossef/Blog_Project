@@ -5,6 +5,14 @@ import 'react-quill-new/dist/quill.snow.css';
 import { postService } from '../../services/postService';
 import { categoryService } from '../../services/categoryService';
 import { jwtService } from '../../services/jwtService';
+import { htmlToText } from '../../lib/sanitize';
+
+const EXCERPT_LENGTH = 120;
+
+const getExcerpt = (html) => {
+    const text = htmlToText(html).replace(/\s+/g, ' ').trim();
+    return text.length > EXCERPT_LENGTH ? `${text.slice(0, EXCERPT_LENGTH)}…` : text;
+};
 
 export default function PostsPage() {
     const [posts, setPosts] = useState([]);
@@ -170,7 +178,6 @@ export default function PostsPage() {
                             value={selectedCategoryFilter}
                             onChange={(e) => {
                                 const categoryId = e.target.value;
-                                console.log("Selected Category ID:", categoryId);
                                 setSelectedCategoryFilter(categoryId);
                                 setPageNumber(1);
                             }}
@@ -215,9 +222,10 @@ export default function PostsPage() {
                                     <h3 style={{ margin: '0 0 10px 0', color: '#1a1a1a', fontSize: '18px', fontWeight: '600' }}>{post.title}</h3>
 
                                     <div
-                                        dangerouslySetInnerHTML={{ __html: post.content ? (post.content.substring(0, 90) + '...') : '' }}
                                         style={{ color: '#555', fontSize: '14px', marginBottom: '15px', lineHeight: '1.5' }}
-                                    />
+                                    >
+                                        {getExcerpt(post.content)}
+                                    </div>
                                 </div>
 
                                 <div>

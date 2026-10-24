@@ -5,7 +5,8 @@ import 'react-quill-new/dist/quill.snow.css';
 import { postService } from '../../services/postService';
 import { uploadService } from '../../services/uploadService';
 import { categoryService } from '../../services/categoryService'; 
-import { jwtService } from '../../services/jwtService'; 
+import { jwtService } from '../../services/jwtService';
+import { sanitizeHtml } from '../../lib/sanitize';
 
 export default function PostDetailsPage() {
     const { id } = useParams();
@@ -248,7 +249,7 @@ export default function PostDetailsPage() {
                                 </div>
                                 <div style={{ height: '1px', background: '#f0f0f0', marginBottom: '30px' }} />
                                 <div 
-                                    dangerouslySetInnerHTML={{ __html: post.content }} 
+                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }} 
                                     style={{ lineHeight: '1.8', color: '#333', fontSize: '16px' }}
                                 />
                             </div>

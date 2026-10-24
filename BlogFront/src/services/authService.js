@@ -1,7 +1,6 @@
 
 import axiosInstance from './axiosConfig';
 import API_ENDPOINTS from '../config/apiEndpoints';
-import { ROUTES } from '../config/routes';
 
 export const authService = {
 
@@ -30,7 +29,6 @@ export const authService = {
 
     logout: async () => {
         localStorage.clear();
-        // window.location.href = `${ROUTES.LOGIN}`;
     }
 
 };

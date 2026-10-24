@@ -19,8 +19,6 @@ export default function ForgotPassword() {
 
     try {
       await authService.forgotPassword({ Email: email });
-      
-      console.log('Sending payload:', { Email: email });
       setIsSubmitted(true);
     } catch (err) {
       setError('Failed to send reset email. Please check your email address.');

@@ -102,7 +102,7 @@ public class PublicHelperShared
     }
 
 
-    public static bool IsGuidFileName(string url)
+    public static bool IsGuidFileName(string? url)
     {
         if (string.IsNullOrEmpty(url)) return false;
 

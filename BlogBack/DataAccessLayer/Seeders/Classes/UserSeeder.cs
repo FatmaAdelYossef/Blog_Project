@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharedLayer;
 
 namespace DataAccessLayer.Seeders.Classes;
 
@@ -67,6 +68,18 @@ public class UserSeeder : ISeeder
                 {
                     var errors = string.Join(", ", result.Errors.Select(x => x.Description));
                     throw new Exception($"Failed to create default user: {errors}");
+                }
+
+                user = userInfo;
+            }
+
+            if (!await userManager.IsInRoleAsync(user, AppRoles.Admin))
+            {
+                var roleResult = await userManager.AddToRoleAsync(user, AppRoles.Admin);
+                if (!roleResult.Succeeded)
+                {
+                    var errors = string.Join(", ", roleResult.Errors.Select(x => x.Description));
+                    throw new Exception($"Failed to assign the Admin role: {errors}");
                 }
             }
         }

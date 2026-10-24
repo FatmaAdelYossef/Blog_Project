@@ -154,6 +154,9 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AuthorId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
@@ -169,6 +172,8 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
 
                     b.HasIndex("CategoryId");
 
@@ -321,11 +326,18 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DataAccessLayer.Models.Post", b =>
                 {
+                    b.HasOne("DataAccessLayer.Models.ApplicationUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("DataAccessLayer.Models.Category", "Category")
                         .WithMany("Posts")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+
+                    b.Navigation("Author");
 
                     b.Navigation("Category");
                 });

@@ -1,173 +1,204 @@
-import React, { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { categoryService } from '../../services/categoryService';
-import { jwtService } from '../../services/jwtService';
+import { useAuth } from '../../context/AuthContext';
+import { Alert, Button, Card, ConfirmDialog, EmptyState, Input, Spinner } from '../../components/ui';
 
 export default function CategoriesPage() {
-    const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    
-    const [name, setName] = useState('');
-    const [editingId, setEditingId] = useState(null);
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState('');
+  const { isAuthenticated } = useAuth();
 
-    useEffect(() => {
-        checkAuth();
-        fetchCategories();
-    }, []);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-    const checkAuth = () => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                if (!jwtService.isTokenExpired(token)) {
-                    setIsAuthenticated(true);
-                } else {
-                    setIsAuthenticated(false);
-                }
-            } catch (err) {
-                setIsAuthenticated(false);
-            }
-        } else {
-            setIsAuthenticated(false);
-        }
+  const [name, setName] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchCategories = useCallback(async (silent = false) => {
+    try {
+      const data = await categoryService.getAll();
+      const list = Array.isArray(data) ? data : (data?.items ?? data?.data ?? []);
+      setCategories(Array.isArray(list) ? list : []);
+    } catch {
+      setError('Could not load categories. Please try again.');
+      if (!silent) setCategories([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      await fetchCategories();
     };
 
-    const fetchCategories = async () => {
-        try {
-            setLoading(true);
-            const data = await categoryService.getAll();
-            const list = Array.isArray(data) ? data : (data.items || data.data || []);
-            setCategories(list);
-        } catch (err) {
-            console.error('Error fetching categories:', err);
-            setError('Failed to fetch categories.');
-        } finally {
-            setLoading(false);
-        }
-    };
+    loadCategories();
+  }, [fetchCategories]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!name.trim()) return;
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-        try {
-            setSaving(true);
-            setError('');
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
 
-            if (editingId) {
-                await categoryService.update(editingId, { name });
-            } else {
-                await categoryService.create({ name });
-            }
+    setSaving(true);
+    setError('');
 
-            setName('');
-            setEditingId(null);
-            fetchCategories();
-        } catch (err) {
-            console.error('Error saving category:', err.response?.data || err.message);
-            setError('An error occurred while saving.');
-        } finally {
-            setSaving(false);
-        }
-    };
+    try {
+      if (editingId) {
+        await categoryService.update(editingId, { name: trimmedName });
+      } else {
+        await categoryService.create({ name: trimmedName });
+      }
 
-    const handleEdit = (cat) => {
-        setEditingId(cat.id);
-        setName(cat.name);
-    };
+      setName('');
+      setEditingId(null);
+      await fetchCategories(true);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not save the category. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    const handleCancelEdit = () => {
-        setEditingId(null);
-        setName('');
-    };
+  const handleEdit = (category) => {
+    setEditingId(category.id);
+    setName(category.name);
+    setError('');
+  };
 
-    const handleDelete = async (id) => {
-        try {
-            await categoryService.delete(id);
-            fetchCategories();
-        } catch (err) {
-            console.error('Error deleting category:', err);
-            setError(err.response?.data?.message || 'Failed to delete category. It may have associated posts.');
-        }
-    };
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setName('');
+  };
 
-    return (
-        <div style={{ maxWidth: '800px', margin: '40px auto', padding: '30px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-            
-            <h2 style={{ marginTop: '0', marginBottom: '20px', color: '#333' }}>Manage Categories</h2>
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
 
-            {error && <div style={{ background: '#f8d7da', color: '#842029', padding: '10px 15px', borderRadius: '6px', marginBottom: '20px', fontSize: '14px' }}>{error}</div>}
+    setDeleting(true);
+    setError('');
 
-            {isAuthenticated && (
-                <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px', marginBottom: '30px', background: '#f8f9fa', padding: '20px', borderRadius: '8px', border: '1px solid #eaeaea' }}>
-                    <input 
-                        type="text" 
-                        placeholder="New category name..." 
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        style={{ flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid #ced4da', fontSize: '15px', outline: 'none' }}
-                    />
-                    <button 
-                        type="submit" 
-                        disabled={saving}
-                        style={{ background: editingId ? '#ffc107' : '#0d6efd', color: editingId ? '#000' : '#fff', border: 'none', padding: '0 25px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '15px' }}
-                    >
-                        {saving ? 'Saving...' : (editingId ? 'Update' : 'Add')}
-                    </button>
-                    {editingId && (
-                        <button 
-                            type="button" 
-                            onClick={handleCancelEdit}
-                            style={{ background: '#6c757d', color: '#fff', border: 'none', padding: '0 15px', borderRadius: '6px', cursor: 'pointer', fontSize: '15px' }}
-                        >
-                            Cancel
-                        </button>
-                    )}
-                </form>
-            )}
+    try {
+      await categoryService.delete(pendingDelete.id);
+      await fetchCategories(true);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message || 'Could not delete the category. It may still have posts.',
+      );
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
+    }
+  };
 
-            {loading ? (
-                <p style={{ textAlign: 'center', color: '#666' }}>Loading categories...</p>
-            ) : categories.length > 0 ? (
-                <div style={{ border: '1px solid #eaeaea', borderRadius: '8px', overflow: 'hidden' }}>
-                    {categories.map((cat, index) => (
-                        <div 
-                            key={cat.id} 
-                            style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center', 
-                                padding: '15px 20px', 
-                                borderBottom: index !== categories.length - 1 ? '1px solid #eaeaea' : 'none',
-                                background: index % 2 === 0 ? '#fff' : '#fcfcfc'
-                            }}
-                        >
-                            <span style={{ fontSize: '16px', color: '#333', fontWeight: '500' }}>{cat.name}</span>
-                            {isAuthenticated && (
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button 
-                                        onClick={() => handleEdit(cat)}
-                                        style={{ background: '#ffc107', color: '#000', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
-                                    >
-                                        Edit
-                                    </button>
-                                    <button 
-                                        onClick={() => handleDelete(cat.id)}
-                                        style={{ background: '#dc3545', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <p style={{ textAlign: 'center', color: '#888', padding: '20px 0' }}>No categories added yet.</p>
-            )}
+  return (
+    <div className="max-w-3xl space-y-6">
+      <h2 className="sr-only">Manage categories</h2>
 
+      {error ? (
+        <Alert variant="danger" onDismiss={() => setError('')}>
+          {error}
+        </Alert>
+      ) : null}
+
+      {isAuthenticated ? (
+        <Card>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <Input
+              label="Category name"
+              required
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="New category name..."
+              className="sm:flex-1"
+            />
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="submit"
+                loading={saving}
+                disabled={!name.trim()}
+                className="sm:shrink-0"
+              >
+                {editingId ? 'Update category' : 'Add category'}
+              </Button>
+
+              {editingId ? (
+                <Button variant="ghost" onClick={handleCancelEdit} disabled={saving}>
+                  Cancel
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        </Card>
+      ) : null}
+
+      {loading ? (
+        <div aria-busy="true" className="flex justify-center py-10">
+          <Spinner label="Loading categories" />
         </div>
-    );
+      ) : categories.length === 0 ? (
+        error ? null : (
+          <EmptyState
+            title="No categories yet"
+            description="Categories group posts so readers can browse by topic."
+          />
+        )
+      ) : (
+        <Card padding="none">
+          <ul className="divide-y divide-line">
+            {categories.map((category) => (
+              <li
+                key={category.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+              >
+                <span className="min-w-0 break-words text-ink">{category.name}</span>
+
+                {isAuthenticated ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      icon={<Pencil />}
+                      onClick={() => handleEdit(category)}
+                      aria-label={`Edit ${category.name}`}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      icon={<Trash2 />}
+                      onClick={() => setPendingDelete(category)}
+                      aria-label={`Delete ${category.name}`}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete this category?"
+        description={
+          pendingDelete
+            ? `"${pendingDelete.name}" will be permanently deleted. Categories that still have posts cannot be deleted.`
+            : undefined
+        }
+        confirmLabel="Delete"
+        loading={deleting}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
+    </div>
+  );
 }

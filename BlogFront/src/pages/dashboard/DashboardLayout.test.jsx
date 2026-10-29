@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import DashboardLayout from './DashboardLayout';
 import { AuthProvider } from '../../context/AuthContext';
+import { ThemeProvider } from '../../context/ThemeContext';
 import { setToken } from '../../lib/tokenStorage';
 
 vi.mock('../../services/authService', () => ({
@@ -22,21 +23,23 @@ const makeToken = (payload) =>
 const renderLayout = () =>
   render(
     <MemoryRouter initialEntries={['/']}>
-      <AuthProvider>
-        <Routes>
-          <Route element={<DashboardLayout />}>
-            <Route path="/" element={<p>overview content</p>} />
-          </Route>
-        </Routes>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <Routes>
+            <Route element={<DashboardLayout />}>
+              <Route path="/" element={<p>overview content</p>} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </ThemeProvider>
     </MemoryRouter>,
   );
 
 describe('DashboardLayout', () => {
-  it('renders the workspace navigation, page heading, and outlet', () => {
+  it('renders the workspace navigation, section label, and outlet', () => {
     renderLayout();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByText('Overview', { selector: 'p' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Posts' })).toHaveAttribute('href', '/posts');
     expect(screen.getByRole('link', { name: 'Categories' })).toHaveAttribute(
       'href',

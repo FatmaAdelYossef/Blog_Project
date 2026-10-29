@@ -35,7 +35,7 @@ export function Select({
           <select
             ref={ref}
             className={cn(
-              'h-10 w-full appearance-none rounded-md border border-line bg-surface pl-3 pr-9 text-sm text-ink transition-colors',
+              'h-10 w-full appearance-none rounded-md border border-line bg-surface pl-3 pr-9 text-sm text-ink transition-colors max-sm:h-11',
               'hover:border-ink-muted/40',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
               'disabled:cursor-not-allowed disabled:bg-surface-muted disabled:opacity-60',

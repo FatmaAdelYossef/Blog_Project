@@ -105,7 +105,7 @@ describe('PostDetailsPage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('heading', { level: 2, name: 'Warm reading' }),
+      await screen.findByRole('heading', { level: 1, name: 'Warm reading' }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Hello/)).toBeInTheDocument();
     expect(screen.getByText('world')).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe('PostDetailsPage', () => {
   it('shows media attached to the post', async () => {
     const user = userEvent.setup();
     renderPage();
-    await screen.findByRole('heading', { level: 2, name: 'Warm reading' });
+    await screen.findByRole('heading', { level: 1, name: 'Warm reading' });
 
     await user.click(screen.getByRole('tab', { name: 'Images' }));
     expect(
@@ -129,7 +129,7 @@ describe('PostDetailsPage', () => {
   it('saves edits from the details form', async () => {
     const user = userEvent.setup();
     renderPage({ authenticated: true });
-    await screen.findByRole('heading', { level: 2, name: 'Warm reading' });
+    await screen.findByRole('heading', { level: 1, name: 'Warm reading' });
 
     await user.click(screen.getByRole('button', { name: 'Edit post' }));
 
@@ -158,7 +158,7 @@ describe('PostDetailsPage', () => {
   it('rejects an empty title or content before saving', async () => {
     const user = userEvent.setup();
     renderPage({ authenticated: true });
-    await screen.findByRole('heading', { level: 2, name: 'Warm reading' });
+    await screen.findByRole('heading', { level: 1, name: 'Warm reading' });
 
     await user.click(screen.getByRole('button', { name: 'Edit post' }));
     await user.clear(screen.getByLabelText(/^Title/));
@@ -173,7 +173,7 @@ describe('PostDetailsPage', () => {
   it('adds a link from its tab', async () => {
     const user = userEvent.setup();
     renderPage({ authenticated: true });
-    await screen.findByRole('heading', { level: 2, name: 'Warm reading' });
+    await screen.findByRole('heading', { level: 1, name: 'Warm reading' });
 
     await user.click(screen.getByRole('button', { name: 'Edit post' }));
     await user.click(screen.getByRole('tab', { name: 'Links' }));
@@ -195,7 +195,7 @@ describe('PostDetailsPage', () => {
   it('uploads images before attaching them', async () => {
     const user = userEvent.setup();
     renderPage({ authenticated: true });
-    await screen.findByRole('heading', { level: 2, name: 'Warm reading' });
+    await screen.findByRole('heading', { level: 1, name: 'Warm reading' });
 
     await user.click(screen.getByRole('button', { name: 'Edit post' }));
     await user.click(screen.getByRole('tab', { name: 'Images' }));
@@ -214,7 +214,7 @@ describe('PostDetailsPage', () => {
   it('asks for confirmation before deleting media', async () => {
     const user = userEvent.setup();
     renderPage({ authenticated: true });
-    await screen.findByRole('heading', { level: 2, name: 'Warm reading' });
+    await screen.findByRole('heading', { level: 1, name: 'Warm reading' });
 
     await user.click(screen.getByRole('button', { name: 'Edit post' }));
     await user.click(screen.getByRole('tab', { name: 'Images' }));

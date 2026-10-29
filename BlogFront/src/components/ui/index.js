@@ -10,6 +10,7 @@ export { IconButton } from './IconButton';
 export { Input } from './Input';
 export { Modal } from './Modal';
 export { Pagination } from './Pagination';
+export { PasswordInput } from './PasswordInput';
 export { Select } from './Select';
 export { Skeleton } from './Skeleton';
 export { Spinner } from './Spinner';

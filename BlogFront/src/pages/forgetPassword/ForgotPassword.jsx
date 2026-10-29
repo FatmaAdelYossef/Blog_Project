@@ -75,6 +75,8 @@ export default function ForgotPassword() {
             type="email"
             name="email"
             autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
             placeholder="you@example.com"
             value={email}
             onChange={(event) => setEmail(event.target.value)}

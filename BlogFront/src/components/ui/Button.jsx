@@ -5,13 +5,13 @@ const variantClasses = {
   primary: 'bg-accent text-surface hover:bg-accent-hover',
   secondary: 'border border-line bg-surface text-ink hover:bg-surface-muted',
   ghost: 'text-ink-muted hover:bg-surface-muted hover:text-ink',
-  danger: 'bg-danger text-white hover:bg-danger/90',
+  danger: 'bg-danger text-danger-contrast hover:bg-danger/90',
   link: 'text-accent underline-offset-4 hover:underline',
 };
 
 const sizeClasses = {
-  sm: 'h-9 px-3 text-sm',
-  md: 'h-10 px-4 text-sm',
+  sm: 'h-9 px-3 text-sm max-sm:h-11',
+  md: 'h-10 px-4 text-sm max-sm:h-11',
   lg: 'h-12 px-5 text-base',
 };
 

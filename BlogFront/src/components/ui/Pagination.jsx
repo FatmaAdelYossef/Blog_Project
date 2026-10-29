@@ -27,7 +27,7 @@ function getPageItems(page, totalPages, siblingCount) {
 }
 
 const pageButtonClasses =
-  'inline-flex size-9 items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
+  'inline-flex size-9 items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent max-sm:size-11';
 
 const navButtonClasses = cn(
   pageButtonClasses,
@@ -95,7 +95,7 @@ export function Pagination({
             </li>
           ) : (
             <li key={item} aria-hidden="true">
-              <span className="inline-flex size-9 items-center justify-center text-sm text-ink-muted">
+              <span className="inline-flex size-9 items-center justify-center text-sm text-ink-muted max-sm:size-11">
                 &hellip;
               </span>
             </li>

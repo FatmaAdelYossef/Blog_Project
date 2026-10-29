@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { ROUTES } from '../../config/routes';
 import { Brand } from './Brand';
+import { ThemeToggle } from './ThemeToggle';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -25,7 +26,7 @@ export function AuthShell({ title, description, children, footer }) {
   return (
     <div className="min-h-screen bg-paper">
       <div className="mx-auto grid min-h-screen w-full max-w-6xl lg:grid-cols-[1.1fr_1fr]">
-        <aside className="relative hidden flex-col justify-between overflow-hidden bg-ink px-12 py-12 text-paper lg:flex">
+        <aside className="paper-texture relative hidden flex-col justify-between overflow-hidden bg-ink px-12 py-12 text-paper lg:flex">
           <div className="flex items-center gap-3">
             <span className="flex size-9 items-center justify-center rounded-md bg-accent text-surface">
               <svg
@@ -47,9 +48,7 @@ export function AuthShell({ title, description, children, footer }) {
           </div>
 
           <div className="max-w-sm">
-            <p className="text-xs font-medium uppercase tracking-[0.22em] text-accent">
-              Editorial workspace
-            </p>
+            <p className="eyebrow">Editorial workspace</p>
             <p className="mt-5 font-serif text-4xl leading-tight">
               Notes, stories, and ideas worth keeping.
             </p>
@@ -68,13 +67,17 @@ export function AuthShell({ title, description, children, footer }) {
               <Brand />
             </div>
 
-            <Link
-              to={ROUTES.HOME}
-              className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              <ArrowLeft aria-hidden="true" className="size-4" />
-              Back to blog
-            </Link>
+            <div className="flex items-center justify-between gap-4">
+              <Link
+                to={ROUTES.HOME}
+                className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                <ArrowLeft aria-hidden="true" className="size-4" />
+                Back to blog
+              </Link>
+
+              <ThemeToggle />
+            </div>
 
             <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               {title}

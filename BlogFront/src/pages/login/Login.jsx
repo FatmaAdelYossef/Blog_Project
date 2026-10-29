@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../config/routes';
 import { AuthShell } from '../../components/layout/AuthShell';
-import { Alert, Button, Input } from '../../components/ui';
+import { Alert, Button, Input, PasswordInput } from '../../components/ui';
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -53,15 +53,16 @@ export default function Login() {
           type="email"
           name="email"
           autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
           placeholder="you@example.com"
           value={formData.email}
           onChange={handleChange('email')}
           required
         />
 
-        <Input
+        <PasswordInput
           label="Password"
-          type="password"
           name="password"
           autoComplete="current-password"
           placeholder="Your password"

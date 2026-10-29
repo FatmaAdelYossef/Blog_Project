@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { ROUTES } from '../../config/routes';
-import { Alert, Button, Card, Input } from '../../components/ui';
+import { Alert, Button, Card, PasswordInput } from '../../components/ui';
+import { PageHeader } from '../../components/PageHeader';
 
 export default function ChangePassword() {
   const [formData, setFormData] = useState({
@@ -61,21 +62,16 @@ export default function ChangePassword() {
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-8">
-      <header>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent">Account</p>
-        <h1 className="mt-2 font-serif text-3xl font-medium tracking-tight text-ink sm:text-4xl">
-          Change password
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          Confirm your current password, then choose a new one.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Account"
+        title="Change password"
+        description="Confirm your current password, then choose a new one."
+      />
 
       <Card padding="lg">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <Input
+          <PasswordInput
             label="Current password"
-            type="password"
             name="current-password"
             autoComplete="current-password"
             value={formData.CurrentPassword}
@@ -83,9 +79,8 @@ export default function ChangePassword() {
             required
           />
 
-          <Input
+          <PasswordInput
             label="New password"
-            type="password"
             name="new-password"
             autoComplete="new-password"
             value={formData.NewPassword}
@@ -93,9 +88,8 @@ export default function ChangePassword() {
             required
           />
 
-          <Input
+          <PasswordInput
             label="Confirm new password"
-            type="password"
             name="confirm-password"
             autoComplete="new-password"
             value={formData.confirmPassword}

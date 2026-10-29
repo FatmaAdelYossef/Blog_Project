@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
-import { ArrowLeft, ExternalLink, FileQuestion, ImageIcon, LinkIcon, Music, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Clock3, ExternalLink, FileQuestion, ImageIcon, LinkIcon, Music, Pencil, Plus, Trash2 } from 'lucide-react';
 import { postService } from '../../services/postService';
 import { uploadService } from '../../services/uploadService';
 import { categoryService } from '../../services/categoryService';
 import { useAuth } from '../../context/AuthContext';
 import { sanitizeHtml } from '../../lib/sanitize';
+import { formatReadingTime, getReadingTime } from '../../lib/readingTime';
+import { PageHeader } from '../../components/PageHeader';
 import {
   Alert,
   Badge,
@@ -337,6 +339,7 @@ export default function PostDetailsPage() {
   }
 
   const publishedAt = formatDate(post.createdAt);
+  const readingTime = formatReadingTime(getReadingTime(post.content));
   const mediaToDeleteTab = MEDIA_TABS.find((tab) => tab.value === mediaToDelete?.mediaType);
 
   const renderMediaList = (tab) => {
@@ -535,23 +538,25 @@ export default function PostDetailsPage() {
   };
 
   const renderDetailsView = () => (
-    <article className="space-y-4">
-      <h2 className="break-words font-serif text-3xl font-semibold tracking-tight text-ink">
-        {post.title}
-      </h2>
-
-      <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+    <article className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-ink-muted">
         {publishedAt ? (
           <time dateTime={post.createdAt}>Published {publishedAt}</time>
         ) : null}
         {post.categoryName ? <Badge variant="accent">{post.categoryName}</Badge> : null}
+        {readingTime ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Clock3 aria-hidden="true" className="size-3.5" />
+            {readingTime}
+          </span>
+        ) : null}
       </div>
 
       <hr className="border-line" />
 
       {post.content ? (
         <div
-          className="text-base leading-relaxed text-ink [&_a]:text-accent [&_a]:underline-offset-4 hover:[&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-line [&_blockquote]:pl-4 [&_blockquote]:text-ink-muted [&_h1]:my-4 [&_h1]:font-serif [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:my-4 [&_h2]:font-serif [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:my-3 [&_h3]:font-serif [&_h3]:text-lg [&_h3]:font-semibold [&_img]:my-4 [&_img]:rounded-md [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-3 [&_ul]:list-disc"
+          className="prose-editorial"
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
         />
       ) : (
@@ -609,23 +614,30 @@ export default function PostDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button variant="secondary" icon={<ArrowLeft />} onClick={() => navigate(-1)}>
-          Back
-        </Button>
+      <PageHeader
+        eyebrow={isEditing ? 'Editing post' : 'Post'}
+        title={post.title}
+        description={post.categoryName ? `Filed under ${post.categoryName}` : undefined}
+        actions={
+          <>
+            <Button variant="secondary" icon={<ArrowLeft />} onClick={() => navigate(-1)}>
+              Back
+            </Button>
 
-        {isAuthenticated && !isEditing ? (
-          <Button
-            icon={<Pencil />}
-            onClick={() => {
-              setActionError('');
-              setIsEditing(true);
-            }}
-          >
-            Edit post
-          </Button>
-        ) : null}
-      </div>
+            {isAuthenticated && !isEditing ? (
+              <Button
+                icon={<Pencil />}
+                onClick={() => {
+                  setActionError('');
+                  setIsEditing(true);
+                }}
+              >
+                Edit post
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       {actionError ? (
         <Alert variant="danger" onDismiss={() => setActionError('')}>

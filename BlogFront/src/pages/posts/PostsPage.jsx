@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
-import { Plus, Search } from 'lucide-react';
+import { LogIn, Plus, Search } from 'lucide-react';
 import { postService } from '../../services/postService';
 import { categoryService } from '../../services/categoryService';
+import { ROUTES } from '../../config/routes';
 import { useAuth } from '../../context/AuthContext';
 import {
   Alert,
+  Badge,
   Button,
   Card,
   ConfirmDialog,
@@ -18,6 +20,7 @@ import {
   Select,
   Skeleton,
 } from '../../components/ui';
+import { PageHeader } from '../../components/PageHeader';
 import { PostCard } from './PostCard';
 
 const PAGE_SIZE = 10;
@@ -31,6 +34,7 @@ export default function PostsPage() {
 
   const [posts, setPosts] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -52,13 +56,29 @@ export default function PostsPage() {
   const [createError, setCreateError] = useState('');
 
   const requestIdRef = useRef(0);
-  const quillRef = useRef(null);
+  const editorContainerRef = useRef(null);
 
   useEffect(() => {
-    if (!isCreateOpen) return;
+    if (!isCreateOpen) return undefined;
+
+    const container = editorContainerRef.current;
+    if (!container) return undefined;
 
     // ReactQuill does not forward aria-label, so name its contenteditable root.
-    quillRef.current?.getEditor?.()?.root?.setAttribute('aria-label', 'Content');
+    // StrictMode remounts the editor in development, so reapply if replaced.
+    const labelEditor = () => {
+      const editor = container.querySelector('.ql-editor');
+      if (editor && editor.getAttribute('aria-label') !== 'Content') {
+        editor.setAttribute('aria-label', 'Content');
+      }
+    };
+
+    labelEditor();
+
+    const observer = new MutationObserver(labelEditor);
+    observer.observe(container, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
   }, [isCreateOpen]);
 
   useEffect(() => {
@@ -111,11 +131,13 @@ export default function PostsPage() {
 
         setPosts(items.map(withoutMedia));
         setTotalPages(payload?.totalPages || 1);
+        setTotalCount(typeof payload?.totalCount === 'number' ? payload.totalCount : items.length);
       } catch {
         if (cancelled || requestId !== requestIdRef.current) return;
 
         setPosts([]);
         setTotalPages(1);
+        setTotalCount(0);
         setError('Could not load posts. Please try again.');
       } finally {
         if (!cancelled && requestId === requestIdRef.current) {
@@ -217,53 +239,92 @@ export default function PostsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="sr-only">All posts</h2>
-          {isAuthenticated ? (
-            <Button icon={<Plus />} onClick={openCreateDialog} className="sm:ml-auto">
-              New post
-            </Button>
-          ) : null}
-        </div>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Archive"
+        title="Posts"
+        description={
+          hasActiveFilters
+            ? `Showing ${totalCount} ${totalCount === 1 ? 'post' : 'posts'} matching your filters.`
+            : 'Read the archive, search by title, and manage your writing.'
+        }
+        actions={
+          <>
+            {!loading ? (
+              <Badge variant="neutral">
+                {totalCount} {totalCount === 1 ? 'post' : 'posts'}
+              </Badge>
+            ) : null}
 
-        {categoriesError ? (
-          <Alert variant="warning" onDismiss={() => setCategoriesError('')}>
-            {categoriesError}
-          </Alert>
-        ) : null}
+            {isAuthenticated ? (
+              <Button icon={<Plus />} onClick={openCreateDialog}>
+                New post
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                icon={<LogIn />}
+                onClick={() => navigate(ROUTES.LOGIN)}
+              >
+                Sign in to write
+              </Button>
+            )}
+          </>
+        }
+      />
 
-        <Card padding="sm">
-          <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <Select
-              label="Filter by category"
-              value={query.categoryId}
-              onChange={handleCategoryFilter}
-              className="sm:w-56"
+      {categoriesError ? (
+        <Alert variant="warning" onDismiss={() => setCategoriesError('')}>
+          {categoriesError}
+        </Alert>
+      ) : null}
+
+      <Card padding="sm">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <Input
+            label="Search by title"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Search posts by title…"
+            className="sm:flex-1"
+          />
+
+          <Select
+            label="Filter by category"
+            value={query.categoryId}
+            onChange={handleCategoryFilter}
+            className="sm:w-56"
+          >
+            <option value="">All categories</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </Select>
+
+          <div className="flex gap-2">
+            <Button
+              type="submit"
+              variant="secondary"
+              icon={<Search />}
+              className="flex-1 sm:flex-none"
             >
-              <option value="">All categories</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </Select>
-
-            <Input
-              label="Search by title"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search posts by title…"
-              className="sm:flex-1"
-            />
-
-            <Button type="submit" variant="secondary" icon={<Search />}>
               Search
             </Button>
-          </form>
-        </Card>
-      </div>
+
+            {hasActiveFilters ? (
+              <Button
+                variant="ghost"
+                onClick={handleClearFilters}
+                className="flex-1 sm:flex-none"
+              >
+                Clear
+              </Button>
+            ) : null}
+          </div>
+        </form>
+      </Card>
 
       {error ? (
         <Alert variant="danger" onDismiss={() => setError('')}>
@@ -372,8 +433,11 @@ export default function PostsPage() {
               </span>
               <span className="sr-only"> (required)</span>
             </legend>
-            <div className="overflow-hidden rounded-md border border-line bg-surface [&_.ql-container]:min-h-40 [&_.ql-container]:border-0 [&_.ql-toolbar]:border-0 [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-line">
-              <ReactQuill ref={quillRef} theme="snow" value={newContent} onChange={setNewContent} />
+            <div
+              ref={editorContainerRef}
+              className="overflow-hidden rounded-md border border-line bg-surface [&_.ql-container]:min-h-40 [&_.ql-container]:border-0 [&_.ql-toolbar]:border-0 [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-line"
+            >
+              <ReactQuill theme="snow" value={newContent} onChange={setNewContent} />
             </div>
           </fieldset>
         </form>

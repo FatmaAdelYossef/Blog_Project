@@ -21,7 +21,7 @@ export function Input({ id, label, hint, error, required, type = 'text', classNa
           ref={ref}
           type={type}
           className={cn(
-            'h-10 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink transition-colors',
+            'h-10 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink transition-colors max-sm:h-11',
             'placeholder:text-ink-muted/70 hover:border-ink-muted/40',
             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
             'disabled:cursor-not-allowed disabled:bg-surface-muted disabled:opacity-60',

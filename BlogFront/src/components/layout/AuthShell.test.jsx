@@ -2,13 +2,16 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { AuthShell } from './AuthShell';
+import { ThemeProvider } from '../../context/ThemeContext';
 
 const renderShell = (props = {}) =>
   render(
     <MemoryRouter>
-      <AuthShell title="Welcome back" description="Sign in to continue." {...props}>
-        <p>form body</p>
-      </AuthShell>
+      <ThemeProvider>
+        <AuthShell title="Welcome back" description="Sign in to continue." {...props}>
+          <p>form body</p>
+        </AuthShell>
+      </ThemeProvider>
     </MemoryRouter>,
   );
 

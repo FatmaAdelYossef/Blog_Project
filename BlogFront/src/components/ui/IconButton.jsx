@@ -8,8 +8,8 @@ const variantClasses = {
 };
 
 const sizeClasses = {
-  sm: 'size-8 [&_svg]:size-4',
-  md: 'size-10 [&_svg]:size-5',
+  sm: 'size-8 [&_svg]:size-4 max-sm:size-10',
+  md: 'size-10 [&_svg]:size-5 max-sm:size-11',
   lg: 'size-12 [&_svg]:size-6',
 };
 

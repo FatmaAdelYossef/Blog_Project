@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../config/routes';
 import { Avatar, Badge, Button, IconButton } from '../../components/ui';
 import { Brand } from '../../components/layout/Brand';
+import { ThemeToggle } from '../../components/layout/ThemeToggle';
 import { cn } from '../../lib/cn';
 import { getFocusableElements } from '../../lib/focusable';
 
@@ -35,9 +36,9 @@ const getPageTitle = (pathname) => {
 
 const navLinkClass = ({ isActive }) =>
   cn(
-    'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
+    'flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
     isActive
-      ? 'bg-accent-soft text-accent'
+      ? 'bg-accent-soft text-accent shadow-[inset_2px_0_0_var(--color-accent)]'
       : 'text-ink-muted hover:bg-surface-muted hover:text-ink',
   );
 
@@ -49,7 +50,7 @@ function SidebarContent({ onNavigate }) {
       <Brand onClick={onNavigate} />
 
       <nav aria-label="Main navigation" className="flex flex-col gap-1">
-        <p className="px-3 pb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-ink-muted">
+        <p className="px-3 pb-2 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-ink-muted">
           Workspace
         </p>
         {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
@@ -237,15 +238,17 @@ export default function DashboardLayout() {
             />
 
             <div className="min-w-0">
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-ink-muted">
+              <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-ink-muted">
                 My Blog
               </p>
-              <h1 className="truncate font-serif text-lg font-semibold tracking-tight text-ink">
+              <p className="truncate font-serif text-lg font-semibold tracking-tight text-ink">
                 {pageTitle}
-              </h1>
+              </p>
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              <ThemeToggle />
+
               {isAuthenticated ? (
                 <div className="relative" ref={accountMenuRef}>
                   <button
@@ -253,7 +256,7 @@ export default function DashboardLayout() {
                     type="button"
                     aria-expanded={isAccountMenuOpen}
                     onClick={() => setIsAccountMenuOpen((open) => !open)}
-                    className="flex items-center gap-2 rounded-full border border-line bg-surface p-1 pr-2.5 transition-colors hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    className="flex min-h-10 items-center gap-2 rounded-full border border-line bg-surface p-1 pr-2.5 transition-colors hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent max-sm:min-h-11"
                   >
                     <Avatar name={user?.email} size="sm" />
                     <span className="hidden max-w-48 truncate text-sm font-medium text-ink sm:block">
@@ -283,7 +286,7 @@ export default function DashboardLayout() {
                         <button
                           type="button"
                           onClick={goToChangePassword}
-                          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+                          className="flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
                         >
                           <KeyRound aria-hidden="true" className="size-4" />
                           Change password
@@ -291,7 +294,7 @@ export default function DashboardLayout() {
                         <button
                           type="button"
                           onClick={handleLogout}
-                          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-danger transition-colors hover:bg-danger/10"
+                          className="flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-danger transition-colors hover:bg-danger/10"
                         >
                           <LogOut aria-hidden="true" className="size-4" />
                           Sign out

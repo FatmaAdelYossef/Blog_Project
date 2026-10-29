@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import { ROUTES } from '../../config/routes';
 import { AuthShell } from '../../components/layout/AuthShell';
-import { Alert, Button, Input } from '../../components/ui';
+import { Alert, Button, PasswordInput } from '../../components/ui';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -102,9 +102,8 @@ export default function ResetPassword() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
-          <Input
+          <PasswordInput
             label="New password"
-            type="password"
             name="new-password"
             autoComplete="new-password"
             value={newPassword}
@@ -112,9 +111,8 @@ export default function ResetPassword() {
             required
           />
 
-          <Input
+          <PasswordInput
             label="Confirm new password"
-            type="password"
             name="confirm-password"
             autoComplete="new-password"
             value={confirmPassword}

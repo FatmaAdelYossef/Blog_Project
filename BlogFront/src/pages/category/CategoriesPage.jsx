@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { categoryService } from '../../services/categoryService';
 import { useAuth } from '../../context/AuthContext';
-import { Alert, Button, Card, ConfirmDialog, EmptyState, Input, Spinner } from '../../components/ui';
+import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, Input, Spinner } from '../../components/ui';
+import { PageHeader } from '../../components/PageHeader';
 
 export default function CategoriesPage() {
   const { isAuthenticated } = useAuth();
@@ -96,8 +97,19 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <h2 className="sr-only">Manage categories</h2>
+    <div className="max-w-3xl space-y-8">
+      <PageHeader
+        eyebrow="Library"
+        title="Categories"
+        description="Categories group posts into the sections readers browse. Rename one at any time; categories that still contain posts cannot be deleted."
+        actions={
+          !loading ? (
+            <Badge variant="neutral">
+              {categories.length} {categories.length === 1 ? 'category' : 'categories'}
+            </Badge>
+          ) : null
+        }
+      />
 
       {error ? (
         <Alert variant="danger" onDismiss={() => setError('')}>
@@ -107,6 +119,13 @@ export default function CategoriesPage() {
 
       {isAuthenticated ? (
         <Card>
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className="font-serif text-lg font-medium text-ink">
+              {editingId ? 'Edit category' : 'New category'}
+            </h2>
+            <span className="eyebrow text-ink-muted">{editingId ? 'Editing' : 'Add'}</span>
+          </div>
+
           <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <Input
               label="Category name"
@@ -149,14 +168,24 @@ export default function CategoriesPage() {
           />
         )
       ) : (
-        <Card padding="none">
+        <Card padding="none" className="overflow-hidden">
           <ul className="divide-y divide-line">
-            {categories.map((category) => (
+            {categories.map((category, index) => (
               <li
                 key={category.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-surface-muted/60 sm:px-5"
               >
-                <span className="min-w-0 break-words text-ink">{category.name}</span>
+                <span className="flex min-w-0 items-baseline gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="font-mono text-2xs tracking-[0.18em] text-ink-muted"
+                  >
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="min-w-0 break-words font-serif text-lg text-ink">
+                    {category.name}
+                  </span>
+                </span>
 
                 {isAuthenticated ? (
                   <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ResetPassword from './ResetPassword';
+import { ThemeProvider } from '../../context/ThemeContext';
 import { authService } from '../../services/authService';
 
 vi.mock('../../services/authService', () => ({
@@ -14,7 +15,9 @@ vi.mock('../../services/authService', () => ({
 const renderPage = (url = '/reset-password') =>
   render(
     <MemoryRouter initialEntries={[url]}>
-      <ResetPassword />
+      <ThemeProvider>
+        <ResetPassword />
+      </ThemeProvider>
     </MemoryRouter>,
   );
 

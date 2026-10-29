@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, FileText, FolderOpen, KeyRound, PenLine } from 'lucide-react';
+import {
+  ArrowRight,
+  FileText,
+  FolderOpen,
+  KeyRound,
+  PenLine,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../config/routes';
 import { categoryService } from '../../services/categoryService';
 import { postService } from '../../services/postService';
 import { Badge, Card, Skeleton } from '../../components/ui';
+import { PageHeader } from '../../components/PageHeader';
 
 const unwrap = (payload) => payload?.data ?? payload;
 
@@ -15,18 +24,36 @@ const ACTIONS = [
     title: 'Posts',
     description: 'Read the archive, search by title, and manage your writing.',
     icon: FileText,
+    meta: 'Read & edit',
   },
   {
     to: ROUTES.CATEGORIES,
     title: 'Categories',
     description: 'Shape the sections that organize the blog.',
     icon: FolderOpen,
+    meta: 'Organize',
   },
   {
     to: ROUTES.CHANGE_PASSWORD,
     title: 'Account security',
     description: 'Update the password that protects your account.',
     icon: KeyRound,
+    meta: 'Protect',
+  },
+];
+
+const STATS = [
+  {
+    key: 'posts',
+    label: 'Posts',
+    description: 'Across every category',
+    icon: FileText,
+  },
+  {
+    key: 'categories',
+    label: 'Categories',
+    description: 'Sections in the archive',
+    icon: FolderOpen,
   },
 ];
 
@@ -70,80 +97,118 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-10">
-      <header className="max-w-2xl">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent">Overview</p>
-        <h1 className="mt-2 font-serif text-4xl font-medium tracking-tight text-ink sm:text-5xl">
-          {isAuthenticated ? 'Your writing desk' : 'Welcome to My Blog'}
-        </h1>
-        <p className="mt-3 text-base leading-relaxed text-ink-muted">
-          {isAuthenticated
-            ? `Signed in as ${user?.email ?? 'a member'}. Pick up where you left off or start something new.`
-            : 'Read the latest posts, browse the archive, or sign in to start writing.'}
-        </p>
-        {isAuthenticated && user?.role ? (
-          <Badge variant="accent" className="mt-4">
-            {user.role}
-          </Badge>
-        ) : null}
-      </header>
+      <Card
+        padding="lg"
+        className="relative overflow-hidden bg-gradient-to-br from-surface via-surface to-surface-muted/70"
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-20 -top-28 size-72 rounded-full border border-line"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-6 -top-10 size-44 rounded-full border border-accent/20"
+        />
+
+        <PageHeader
+          eyebrow="Overview"
+          title={isAuthenticated ? 'Your writing desk' : 'Welcome to My Blog'}
+          description={
+            isAuthenticated
+              ? `Signed in as ${user?.email ?? 'a member'}. Pick up where you left off or start something new.`
+              : 'Read the latest posts, browse the archive, or sign in to start writing.'
+          }
+          actions={
+            isAuthenticated && user?.role ? (
+              <Badge variant="accent">{user.role}</Badge>
+            ) : (
+              <Link
+                to={ROUTES.LOGIN}
+                className="inline-flex min-h-11 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-surface transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                Start writing
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+            )
+          }
+        />
+
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line pt-5 text-xs text-ink-muted">
+          <span className="inline-flex items-center gap-2">
+            <PenLine aria-hidden="true" className="size-3.5 text-accent" />
+            Notes, stories, and ideas worth keeping.
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <Sparkles aria-hidden="true" className="size-3.5 text-accent" />
+            A calm place to publish.
+          </span>
+        </div>
+      </Card>
 
       <section aria-labelledby="stats-heading">
         <h2 id="stats-heading" className="sr-only">
           Workspace totals
         </h2>
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <p className="text-sm text-ink-muted">Posts</p>
-            <p className="mt-2 font-serif text-4xl text-ink" aria-busy={stats.loading || undefined}>
-              {stats.loading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <>
-                  {stats.posts ?? '—'}
-                  {stats.posts === null ? <span className="sr-only"> unavailable</span> : null}
-                </>
-              )}
-            </p>
-            <p className="mt-1 text-xs text-ink-muted">Across every category</p>
-          </Card>
+          {STATS.map(({ key, label, description, icon: Icon }) => (
+            <Card key={key} className="flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="inline-flex size-10 items-center justify-center rounded-md bg-accent-soft text-accent">
+                  <Icon aria-hidden="true" className="size-5" />
+                </span>
+                <span className="eyebrow text-ink-muted">Total</span>
+              </div>
 
-          <Card>
-            <p className="text-sm text-ink-muted">Categories</p>
-            <p className="mt-2 font-serif text-4xl text-ink" aria-busy={stats.loading || undefined}>
-              {stats.loading ? (
-                <Skeleton className="h-9 w-16" />
-              ) : (
-                <>
-                  {stats.categories ?? '—'}
-                  {stats.categories === null ? (
-                    <span className="sr-only"> unavailable</span>
-                  ) : null}
-                </>
-              )}
-            </p>
-            <p className="mt-1 text-xs text-ink-muted">Sections in the archive</p>
-          </Card>
+              <div>
+                <p className="text-sm text-ink-muted">{label}</p>
+                <p
+                  className="mt-1 font-serif text-4xl leading-none text-ink"
+                  aria-busy={stats.loading || undefined}
+                >
+                  {stats.loading ? (
+                    <Skeleton className="h-9 w-16" />
+                  ) : (
+                    <>
+                      {stats[key] ?? '—'}
+                      {stats[key] === null ? <span className="sr-only"> unavailable</span> : null}
+                    </>
+                  )}
+                </p>
+                <p className="mt-2 text-xs text-ink-muted">{description}</p>
+              </div>
+            </Card>
+          ))}
 
-          <Card>
-            <p className="text-sm text-ink-muted">Your access</p>
-            <div className="mt-3 flex items-center gap-2">
-              <Badge variant={isAuthenticated ? 'accent' : 'neutral'}>
-                {isAuthenticated ? (user?.role ?? 'Member') : 'Guest'}
-              </Badge>
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="inline-flex size-10 items-center justify-center rounded-md bg-accent-soft text-accent">
+                <ShieldCheck aria-hidden="true" className="size-5" />
+              </span>
+              <span className="eyebrow text-ink-muted">Session</span>
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-              {isAuthenticated
-                ? 'You can write and manage the posts you own.'
-                : 'Sign in to write and manage posts.'}
-            </p>
-            {!isAuthenticated ? (
-              <Link
-                to={ROUTES.LOGIN}
-                className="mt-3 inline-flex text-sm font-medium text-accent underline-offset-4 hover:underline"
-              >
-                Sign in
-              </Link>
-            ) : null}
+
+            <div>
+              <p className="text-sm text-ink-muted">Your access</p>
+              <div className="mt-2 flex items-center gap-2">
+                <Badge variant={isAuthenticated ? 'accent' : 'neutral'}>
+                  {isAuthenticated ? (user?.role ?? 'Member') : 'Guest'}
+                </Badge>
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+                {isAuthenticated
+                  ? 'You can write and manage the posts you own.'
+                  : 'Sign in to write and manage posts.'}
+              </p>
+              {!isAuthenticated ? (
+                <Link
+                  to={ROUTES.LOGIN}
+                  className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent underline-offset-4 hover:underline"
+                >
+                  Sign in
+                </Link>
+              ) : null}
+            </div>
           </Card>
         </div>
       </section>
@@ -159,23 +224,29 @@ export default function Dashboard() {
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {ACTIONS.map(({ to, title, description, icon: Icon }) => (
+          {ACTIONS.map(({ to, title, description, icon: Icon, meta }, index) => (
             <Card
               key={to}
               as={Link}
               to={to}
-              className="group flex flex-col transition-colors hover:border-accent/40"
+              className="group flex flex-col transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lift focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transform-none motion-reduce:transition-none"
             >
-              <span className="mb-5 inline-flex size-10 items-center justify-center rounded-md bg-accent-soft text-accent">
-                <Icon aria-hidden="true" className="size-5" />
-              </span>
+              <div className="mb-5 flex items-center justify-between">
+                <span className="inline-flex size-10 items-center justify-center rounded-md bg-accent-soft text-accent">
+                  <Icon aria-hidden="true" className="size-5" />
+                </span>
+                <span className="font-mono text-2xs uppercase tracking-[0.18em] text-ink-muted">
+                  {String(index + 1).padStart(2, '0')} · {meta}
+                </span>
+              </div>
+
               <h3 className="font-serif text-lg font-medium text-ink">{title}</h3>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-muted">{description}</p>
               <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-accent">
                 Open
                 <ArrowRight
                   aria-hidden="true"
-                  className="size-4 transition-transform group-hover:translate-x-0.5"
+                  className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none"
                 />
               </span>
             </Card>

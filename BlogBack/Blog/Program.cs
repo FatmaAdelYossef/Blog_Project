@@ -22,7 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddDbContext<BlogDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("Connection1")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Connection1")));
 
 // inject business logic
 builder.Services.Scan(scan => scan

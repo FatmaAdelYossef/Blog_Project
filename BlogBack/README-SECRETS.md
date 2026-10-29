@@ -14,7 +14,7 @@ Provide values through environment variables or the .NET Secret Manager (user-se
 | `Jwt:Audience` | `Jwt__Audience` | Defaults to `BlogUser` in `appsettings.json`. |
 | `EmailSettings:Password` | `EmailSettings__Password` | SMTP password or app-specific password. |
 | `EmailSettings:SenderEmail` | `EmailSettings__SenderEmail` | SMTP account / From address. |
-| `ConnectionStrings:Connection1` | `ConnectionStrings__Connection1` | SQL Server connection string. |
+| `ConnectionStrings:Connection1` | `ConnectionStrings__Connection1` | PostgreSQL connection string, for example `Host=localhost;Port=5432;Database=blog;Username=blog;Password=...`. |
 | `Seed:DefaultPassword` | `Seed__DefaultPassword` | Password for the development seed users. If empty, seeding users is skipped. |
 | `Frontend:Origin` | `Frontend__Origin` | Allowed CORS origin. Defaults to `http://localhost:5173`; set this in non-development environments. |
 

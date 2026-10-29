@@ -9,7 +9,7 @@ their password by email.
 | Layer | Stack |
 | --- | --- |
 | Frontend | React 19, Vite 8, Tailwind CSS 4, React Router 7, Axios, DOMPurify, react-quill-new, Oxlint |
-| Backend | .NET 8, ASP.NET Core Web API, Entity Framework Core 8, SQL Server, ASP.NET Core Identity, JWT bearer auth |
+| Backend | .NET 8, ASP.NET Core Web API, Entity Framework Core 8, PostgreSQL, ASP.NET Core Identity, JWT bearer auth |
 | Backend libraries | AutoMapper, Scrutor, Swashbuckle (Swagger) |
 
 ## Repository layout
@@ -33,8 +33,7 @@ BlogBack/
 - Node.js `^20.19.0` or `>=22.12.0` and npm (the Vite 8 and plugin-react engine requirement; CI uses
   Node.js 22).
 - .NET 8 SDK.
-- A SQL Server instance the API can reach (SQL Server Express, Developer, LocalDB, or containerized
-  SQL Server).
+- A PostgreSQL 14+ instance the API can reach (for example, the `postgres:17-alpine` container).
 
 ## Configuration
 

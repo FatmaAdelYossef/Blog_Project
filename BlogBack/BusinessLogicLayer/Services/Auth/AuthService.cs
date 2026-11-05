@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Hosting;
 using SharedLayer;
 using SharedLayer.Helpers;
+using Microsoft.Extensions.Configuration;
 
 namespace BusinessLogicLayer.Services.Auth;
 
@@ -22,17 +23,20 @@ public class AuthService : IAuthService
     private readonly IJwtService _jwtService;
     private readonly IEmailService _emailService;
     private readonly IWebHostEnvironment _env;
+    private readonly IConfiguration _configuration;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         IJwtService jwtService,
         IEmailService emailService,
-        IWebHostEnvironment env)
+        IWebHostEnvironment env,
+        IConfiguration configuration)
     {
         _userManager = userManager;
         _jwtService = jwtService;
         _emailService = emailService;
         _env = env;
+        _configuration = configuration;
     }
 
     public async Task<string> LoginAsync(LoginDto model)
@@ -68,7 +72,15 @@ public class AuthService : IAuthService
         if (user == null) return false;
 
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var frontUrl = _env.IsDevelopment() ? AppConstants.FrontUrlDevelopment : AppConstants.FrontUrlProduction;
+        // Frontend:Origin is the single source for the app's public URL (CORS + reset links).
+        // Falls back to the environment defaults when only Developing locally.
+        var frontUrl = _configuration["Frontend:Origin"];
+        if (string.IsNullOrWhiteSpace(frontUrl))
+        {
+            frontUrl = _env.IsDevelopment()
+                ? AppConstants.FrontUrlDevelopment
+                : AppConstants.FrontUrlProduction;
+        }
 
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
         var resetUrl = $"{frontUrl}/reset-password?email={dto.Email}&token={encodedToken}";

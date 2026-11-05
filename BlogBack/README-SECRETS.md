@@ -15,8 +15,9 @@ Provide values through environment variables or the .NET Secret Manager (user-se
 | `EmailSettings:Password` | `EmailSettings__Password` | SMTP password or app-specific password. |
 | `EmailSettings:SenderEmail` | `EmailSettings__SenderEmail` | SMTP account / From address. |
 | `ConnectionStrings:Connection1` | `ConnectionStrings__Connection1` | PostgreSQL connection string, for example `Host=localhost;Port=5432;Database=blog;Username=blog;Password=...`. |
-| `Seed:DefaultPassword` | `Seed__DefaultPassword` | Password for the development seed users. If empty, seeding users is skipped. |
-| `Frontend:Origin` | `Frontend__Origin` | Allowed CORS origin. Defaults to `http://localhost:5173`; set this in non-development environments. |
+| `Seed:DefaultPassword` | `Seed__DefaultPassword` | Password for the development seed users. If empty, seeding users is skipped. Must satisfy the password policy (at least 12 characters with a digit, an uppercase and a lowercase letter). |
+| `Frontend:Origin` | `Frontend__Origin` | Allowed CORS origin. Also used as the base URL for reset-password links. Defaults to `http://localhost:5173`; set this in non-development environments. |
+| `ForwardedHeaders:Enabled` | `ForwardedHeaders__Enabled` | Set to `true` behind a reverse proxy / PaaS load balancer that terminates TLS, so real client IP and scheme are honored. |
 
 Environment variables take precedence over JSON files, so production deployments should set the
 `__`-separated names above in the host's secret store or environment.

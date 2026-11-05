@@ -21,6 +21,16 @@ public class EmailService : IEmailService
 
     public async Task SendEmailAsync(string toEmail, string subject, string body)
     {
+        if (string.IsNullOrWhiteSpace(_emailSettings.SenderEmail) ||
+            string.IsNullOrWhiteSpace(_emailSettings.Password))
+        {
+            // The reset-password flow is deferred by product decision until SMTP
+            // credentials are provisioned (see README-SECRETS.md). Fail loudly and
+            // cleanly instead of throwing SmtpClient transport errors.
+            throw new InvalidOperationException(
+                "Email sending is not configured (EmailSettings are missing credentials).");
+        }
+
         using var client = new SmtpClient(_emailSettings.Server, _emailSettings.Port)
         {
             Credentials = new NetworkCredential(_emailSettings.SenderEmail, _emailSettings.Password),

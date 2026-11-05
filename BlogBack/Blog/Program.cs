@@ -9,6 +9,7 @@ using DataAccessLayer.Models;
 using DataAccessLayer.Seeders;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -34,12 +35,14 @@ builder.Services.Scan(scan => scan
 
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
-    options.SignIn.RequireConfirmedAccount = true;
-    options.Password.RequireDigit = false;
-    options.Password.RequiredLength = 2;
+    // Login uses UserManager.CheckPasswordAsync (no SignInManager), and the email
+    // confirmation flow is deferred until SMTP is configured — so confirmation is off.
+    options.SignIn.RequireConfirmedAccount = false;
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 12;
     options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireUppercase = false;
-    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
 })
     .AddEntityFrameworkStores<BlogDbContext>()
     .AddDefaultTokenProviders();
@@ -149,7 +152,21 @@ builder.Services.AddSwaggerGen(c =>
 // Hosted Services
 builder.Services.AddHostedService<MigrationService<BlogDbContext>>();
 
+// Health endpoint for PaaS platforms / load balancers (real DB connectivity check).
+builder.Services.AddHealthChecks()
+    .AddCheck<BusinessLogicLayer.Services.Health.BlogDbHealthCheck>("database");
+
 var app = builder.Build();
+
+// Behind PaaS load balancers (TLS termination) X-Forwarded-* headers carry the real
+// client IP and scheme. Off by default; enabled in production via ForwardedHeaders__Enabled=true.
+if (builder.Configuration.GetValue<bool>("ForwardedHeaders:Enabled"))
+{
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    });
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -179,6 +196,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();
 
 await app.RunAsync();

@@ -8,6 +8,12 @@ namespace DataAccessLayer.DTOs.Auth;
 
 public class LoginDto
 {
+    [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email is required")]
+    [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "A valid email address is required")]
+    [System.ComponentModel.DataAnnotations.StringLength(256)]
     public string Email { get; set; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Password is required")]
+    [System.ComponentModel.DataAnnotations.StringLength(256)]
     public string Password { get; set; } = string.Empty;
 }

@@ -93,6 +93,13 @@ Run from `BlogFront/`:
 | `npm run lint` | `oxlint` | Run the linter configured in `.oxlintrc.json`. |
 | `npm run preview` | `vite preview` | Serve the production build locally. |
 
+## Deployment
+
+[`DEPLOYMENT.md`](DEPLOYMENT.md) is the PaaS runbook: two production images (API + nginx/SPA,
+both Alpine-based, non-root), the required environment variables, health endpoints
+(`/health` for the API, `/healthz` for the frontend), and a `docker-compose.yml` that runs the
+full stack locally for verification.
+
 ## Continuous integration
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and pull request targeting

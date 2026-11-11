@@ -259,7 +259,7 @@ export default function DashboardLayout() {
 
             <div className="min-w-0">
               <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-ink-muted">
-                {t('app.name')}
+                {siteName}
               </p>
               <p className="truncate font-serif text-lg font-semibold tracking-tight text-ink">
                 {pageTitle}

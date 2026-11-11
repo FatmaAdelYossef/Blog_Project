@@ -58,7 +58,7 @@ export default {
   'footer.line1': '{name} · A quiet place to write and publish.',
   'footer.line2': 'Notes, stories, and ideas worth keeping.',
 
-  'home.eyebrow': 'My Blog',
+  'home.eyebrow': '{name}',
   'home.title': 'Notes, stories, and ideas worth keeping.',
   'home.subtitle':
     'A quiet place to read what is being written — browse the archive, search by title, and settle in with something new.',
@@ -73,7 +73,7 @@ export default {
   'home.emptyTitle': 'Nothing published yet',
   'home.emptyDesc': 'Check back soon — the first posts are on their way.',
 
-  'dash.titleGuest': 'Welcome to My Blog',
+  'dash.titleGuest': 'Welcome to {name}',
   'dash.titleAuth': 'Your writing desk',
   'dash.descGuest': 'Read the latest posts, browse the archive, or sign in to start writing.',
   'dash.descAuth': 'Signed in as {email}. Pick up where you left off or start something new.',

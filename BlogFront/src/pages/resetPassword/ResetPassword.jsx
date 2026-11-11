@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import { useLanguage } from '../../i18n';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { ROUTES } from '../../config/routes';
 import { applySeo } from '../../lib/seo';
 import { AuthShell } from '../../components/layout/AuthShell';
@@ -11,11 +12,13 @@ export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { settings } = useSiteSettings();
+  const siteName = settings?.siteName || t('app.name');
 
   useEffect(() => {
     // Private route: keep crawlers out of the head.
-    applySeo({ title: `${t('reset.submit')} · ${t('app.name')}`, noindex: true });
-  }, [t]);
+    applySeo({ title: `${t('reset.submit')} · ${siteName}`, noindex: true });
+  }, [t, siteName]);
 
   const emailFromUrl = searchParams.get('email') || '';
   const tokenFromUrl = searchParams.get('token') || '';

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { postService } from '../../services/postService';
 import { useLanguage } from '../../i18n';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { ROUTES } from '../../config/routes';
 import { Alert, Button, EmptyState, Skeleton } from '../../components/ui';
 import { PostCard } from '../posts/PostCard';
@@ -15,6 +16,8 @@ const withoutMedia = ({ medias: _medias, ...post }) => post;
 export default function PublicHome() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { settings } = useSiteSettings();
+  const siteName = settings?.siteName || t('app.name');
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -68,7 +71,7 @@ export default function PublicHome() {
         />
 
         <div className="relative max-w-2xl">
-          <p className="eyebrow">{t('home.eyebrow')}</p>
+          <p className="eyebrow">{t('home.eyebrow', { name: siteName })}</p>
           <h1 className="mt-3 font-serif text-4xl font-medium leading-tight tracking-tight text-ink sm:text-5xl">
             {t('home.title')}
           </h1>

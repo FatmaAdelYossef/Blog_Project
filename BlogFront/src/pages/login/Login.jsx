@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { ROUTES } from '../../config/routes';
 import { applySeo } from '../../lib/seo';
 import { AuthShell } from '../../components/layout/AuthShell';
@@ -9,11 +10,13 @@ import { Alert, Button, Input, PasswordInput } from '../../components/ui';
 
 export default function Login() {
   const { t } = useLanguage();
+  const { settings } = useSiteSettings();
+  const siteName = settings?.siteName || t('app.name');
 
   useEffect(() => {
     // Private route: keep crawlers out of the head.
-    applySeo({ title: `${t('auth.signInPage')} · ${t('app.name')}`, noindex: true });
-  }, [t]);
+    applySeo({ title: `${t('auth.signInPage')} · ${siteName}`, noindex: true });
+  }, [t, siteName]);
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Feather, LayoutDashboard, LogIn, Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { useLanguage } from '../../i18n';
 import { ROUTES } from '../../config/routes';
 import { applySeo } from '../../lib/seo';
@@ -16,12 +17,12 @@ const NAV_KEYS = [
   { to: ROUTES.CATEGORIES, labelKey: 'nav.categories' },
 ];
 
-const getPageTitle = (pathname, t) => {
+const getPageTitle = (pathname, t, siteName) => {
   if (pathname === ROUTES.HOME) return t('page.home');
   if (pathname.startsWith(`${ROUTES.POSTS}/`)) return t('page.post');
   if (pathname.startsWith(ROUTES.POSTS)) return t('page.posts');
   if (pathname.startsWith(ROUTES.CATEGORIES)) return t('page.categories');
-  return t('app.name');
+  return siteName || t('app.name');
 };
 
 const navLinkClass = ({ isActive }) =>
@@ -42,9 +43,11 @@ export default function PublicLayout() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { t } = useLanguage();
+  const { settings: siteSettings } = useSiteSettings();
+  const siteName = siteSettings?.siteName || t('app.name');
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const pageTitle = getPageTitle(location.pathname, t);
+  const pageTitle = getPageTitle(location.pathname, t, siteName);
   const isPostDetailsRoute = /^\/posts\/[^/]+$/.test(location.pathname);
 
   // Close the mobile menu on navigation by adjusting state during render
@@ -70,11 +73,11 @@ export default function PublicLayout() {
   useEffect(() => {
     if (isPostDetailsRoute) return undefined;
     applySeo({
-      title: `${pageTitle} · My Blog`,
+      title: `${pageTitle} · ${siteName}`,
       noindex: location.pathname === ROUTES.CHANGE_PASSWORD,
     });
     return undefined;
-  }, [pageTitle, isPostDetailsRoute, location.pathname]);
+  }, [pageTitle, isPostDetailsRoute, location.pathname, siteName]);
 
   return (
     <div className="flex min-h-screen flex-col bg-paper">
@@ -102,7 +105,7 @@ export default function PublicLayout() {
             </span>
             <span className="flex flex-col leading-none">
               <span className="font-serif text-lg font-semibold tracking-tight text-ink">
-                My Blog
+                {siteName}
               </span>
               <span className="mt-1 text-[11px] font-medium uppercase tracking-[0.18em] text-ink-muted">
                 {t('app.taglinePublic')}
@@ -179,7 +182,7 @@ export default function PublicLayout() {
 
       <footer className="border-t border-line">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-2 px-4 py-6 text-center text-xs text-ink-muted sm:px-6 lg:flex-row lg:justify-between lg:px-10 lg:text-left">
-          <p>{t('footer.line1')}</p>
+          <p>{t('footer.line1', { name: siteName })}</p>
           <p>{t('footer.line2')}</p>
         </div>
       </footer>

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Home } from 'lucide-react';
 import { useLanguage } from '../i18n';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import { ROUTES } from '../config/routes';
 import { applySeo } from '../lib/seo';
 import { AuthShell } from '../components/layout/AuthShell';
@@ -10,11 +11,13 @@ import { Button } from '../components/ui';
 export default function NotFound() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { settings } = useSiteSettings();
+  const siteName = settings?.siteName || t('app.name');
 
   useEffect(() => {
     // Do not let crawlers index a dead URL.
-    applySeo({ title: `${t('notFound.title')} · ${t('app.name')}`, noindex: true });
-  }, [t]);
+    applySeo({ title: `${t('notFound.title')} · ${siteName}`, noindex: true });
+  }, [t, siteName]);
 
   return (
     <AuthShell

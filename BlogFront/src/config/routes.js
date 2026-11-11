@@ -7,4 +7,5 @@ export const ROUTES = {
     RESET_PASSWORD: `/reset-password`,
     POSTS: `/posts`,
     CATEGORIES: `/categories`,
+    CUSTOMIZE: `/customize`,
 };

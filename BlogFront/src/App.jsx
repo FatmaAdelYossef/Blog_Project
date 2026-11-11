@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { SiteSettingsProvider } from './context/SiteSettingsContext';
 import { LanguageProvider } from './i18n';
 import { ScrollToTop } from './components/layout/ScrollToTop';
 import { AuthGuard } from './components/AuthGuard';
@@ -14,6 +15,7 @@ import ChangePassword from './pages/changePassword/ChangePassword';
 import ForgotPassword from './pages/forgetPassword/ForgotPassword';
 import ResetPassword from './pages/resetPassword/ResetPassword';
 import DashboardLayout from './pages/dashboard/DashboardLayout';
+import CustomizePage from './pages/dashboard/CustomizePage';
 import PublicLayout from './components/layout/PublicLayout';
 import CategoriesPage from './pages/category/CategoriesPage';
 
@@ -51,6 +53,7 @@ function App() {
       <ThemeProvider>
         <LanguageProvider>
         <AuthProvider>
+          <SiteSettingsProvider>
           <ScrollToTop />
           <Routes>
             {/* 1. Public Auth Routes */}
@@ -67,6 +70,7 @@ function App() {
               <Route path={ROUTES.HOME} element={<HomePage />} />
               <Route element={<AuthGuard />}>
                 <Route path={ROUTES.CHANGE_PASSWORD} element={<ChangePassword />} />
+                <Route path={ROUTES.CUSTOMIZE} element={<CustomizePage />} />
               </Route>
               <Route
                 path={ROUTES.POSTS}
@@ -90,6 +94,7 @@ function App() {
             {/* 3. Wildcard Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </SiteSettingsProvider>
         </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>

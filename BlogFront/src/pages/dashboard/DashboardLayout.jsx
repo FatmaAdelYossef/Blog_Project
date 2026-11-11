@@ -9,9 +9,11 @@ import {
   LogIn,
   LogOut,
   Menu,
+  Palette,
   X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { useLanguage } from '../../i18n';
 import { ROUTES } from '../../config/routes';
 import { applySeo } from '../../lib/seo';
@@ -26,6 +28,7 @@ const NAV_KEYS = [
   { to: ROUTES.HOME, labelKey: 'nav.overview', icon: LayoutDashboard, end: true },
   { to: ROUTES.POSTS, labelKey: 'nav.posts', icon: FileText },
   { to: ROUTES.CATEGORIES, labelKey: 'nav.categories', icon: FolderOpen },
+  { to: ROUTES.CUSTOMIZE, labelKey: 'nav.customize', icon: Palette, adminOnly: true },
 ];
 
 const getPageTitle = (pathname, t) => {
@@ -56,12 +59,14 @@ function SidebarContent({ onNavigate, t }) {
         <p className="px-3 pb-2 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-ink-muted">
           {t('nav.workspace')}
         </p>
-        {NAV_KEYS.map(({ to, labelKey, icon: Icon, end }) => (
+        {NAV_KEYS.filter(({ adminOnly }) => !adminOnly || user?.role === 'Admin').map(
+          ({ to, labelKey, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} onClick={onNavigate} className={navLinkClass}>
             <Icon aria-hidden="true" className="size-4" />
-            {t(labelKey)}
-          </NavLink>
-        ))}
+              {t(labelKey)}
+            </NavLink>
+          ),
+        )}
       </nav>
 
       <div className="mt-auto">
@@ -106,6 +111,8 @@ export default function DashboardLayout() {
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
   const { t } = useLanguage();
+  const { settings: siteSettings } = useSiteSettings();
+  const siteName = siteSettings?.siteName || t('app.name');
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -125,11 +132,11 @@ export default function DashboardLayout() {
   useEffect(() => {
     if (isPostDetailsRoute) return undefined;
     applySeo({
-      title: `${pageTitle} · ${t('app.name')}`,
+      title: `${pageTitle} · ${siteName}`,
       noindex: location.pathname === ROUTES.CHANGE_PASSWORD,
     });
     return undefined;
-  }, [pageTitle, isPostDetailsRoute, location.pathname, t]);
+  }, [pageTitle, isPostDetailsRoute, location.pathname, siteName]);
 
   // Mobile navigation: lock the page, trap focus, close on Escape, and return
   // focus to the button that opened the drawer.
@@ -252,7 +259,7 @@ export default function DashboardLayout() {
 
             <div className="min-w-0">
               <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-ink-muted">
-                {t('app.name')}
+                {siteName}
               </p>
               <p className="truncate font-serif text-lg font-semibold tracking-tight text-ink">
                 {pageTitle}
@@ -333,7 +340,7 @@ export default function DashboardLayout() {
         </main>
 
         <footer className="border-t border-line px-4 py-5 text-center text-xs text-ink-muted sm:px-6 lg:px-10">
-          {t('footer.line1')}
+          {t('footer.line1', { name: siteName })}
         </footer>
       </div>
 

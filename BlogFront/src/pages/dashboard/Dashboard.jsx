@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { ROUTES } from '../../config/routes';
 import { categoryService } from '../../services/categoryService';
 import { postService } from '../../services/postService';
@@ -61,6 +62,8 @@ const ACTIONS = [
 export default function Dashboard() {
   const { isAuthenticated, user } = useAuth();
   const { t } = useLanguage();
+  const { settings: siteSettings } = useSiteSettings();
+  const siteName = siteSettings?.siteName || t('app.name');
   const [stats, setStats] = useState({ posts: null, categories: null, loading: true });
 
   useEffect(() => {
@@ -114,7 +117,7 @@ export default function Dashboard() {
 
         <PageHeader
           eyebrow={t('nav.overview')}
-          title={isAuthenticated ? t('dash.titleAuth') : t('dash.titleGuest')}
+          title={isAuthenticated ? t('dash.titleAuth') : t('dash.titleGuest', { name: siteName })}
           description={
             isAuthenticated
               ? t('dash.descAuth', { email: user?.email ?? '' })

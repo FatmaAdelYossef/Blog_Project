@@ -14,6 +14,36 @@ export default {
   'nav.closeMenu': 'إغلاق القائمة',
   'nav.mainNav': 'التنقل الرئيسي',
   'nav.mobileNav': 'قائمة الجوال',
+  'nav.customize': 'التخصيص',
+
+  'customize.eyebrow': 'الهوية',
+  'customize.title': 'خصّص مدونتك',
+  'customize.desc':
+    'اجعل المساحة ملكك — غيّر اسم المدونة، واكتب وصفاً قصيراً، واختر ألوان التمييز للوضعين الفاتح والداكن. التغييرات بتظهر لكل الزوار أول ما تحفظ.',
+  'customize.identity': 'هوية الموقع',
+  'customize.identityHint': 'تظهر في شريط التنقل والفوتر وعنوان المتصفح والروابط المشاركة.',
+  'customize.nameLabel': 'اسم المدونة',
+  'customize.namePlaceholder': 'مثال: صفحات منتصف الليل',
+  'customize.taglineLabel': 'الوصف المختصر',
+  'customize.taglinePlaceholder': 'سطر قصير تحت الاسم (اختياري)',
+  'customize.colors': 'ألوان التمييز',
+  'customize.colorsHint':
+    'الأزرار والروابط والشارات والعناصر المميزة بتستخدم لون التمييز. سيب الحقل على الافتراضي عشان تحتفظ بالألوان الأساسية.',
+  'customize.lightAccent': 'لون التمييز — الوضع الفاتح',
+  'customize.darkAccent': 'لون التمييز — الوضع الداكن',
+  'customize.default': 'افتراضي',
+  'customize.useDefault': 'استخدم الافتراضي',
+  'customize.resetColors': 'إعادة تعيين الألوان',
+  'customize.preview': 'معاينة',
+  'customize.previewButton': 'زر أساسي',
+  'customize.previewBadge': 'شارة',
+  'customize.previewLink': 'رابط',
+  'customize.previewFallbackName': 'اسم مدونتك',
+  'customize.save': 'حفظ التغييرات',
+  'customize.saving': 'جارٍ الحفظ…',
+  'customize.saved': 'تم حفظ إعدادات الموقع — الهوية الجديدة ظاهرة الآن.',
+  'customize.saveError': 'تعذّر حفظ إعدادات الموقع. حاول مرة أخرى.',
+  'customize.adminOnly': 'التخصيص متاح للمدير فقط. اطلب من المدير تحديث اسم المدونة والألوان.',
 
   'auth.signIn': 'تسجيل الدخول',
   'auth.signOut': 'تسجيل الخروج',
@@ -24,10 +54,10 @@ export default {
   'auth.guestHint': 'سجّل الدخول لتكتب وتدير المقالات.',
   'auth.signedIn': 'تم تسجيل الدخول',
 
-  'footer.line1': 'مدونتي · مكان هادئ للكتابة والنشر.',
+  'footer.line1': '{name} · مكان هادئ للكتابة والنشر.',
   'footer.line2': 'ملاحظات وقصص وأفكار تستحق الحفظ.',
 
-  'home.eyebrow': 'مدونتي',
+  'home.eyebrow': '{name}',
   'home.title': 'ملاحظات وقصص وأفكار تستحق الحفظ.',
   'home.subtitle':
     'مكان هادئ لقراءة ما يُكتب — تصفّح الأرشيف، وابحث بالعنوان، واستمتع بشيء جديد.',
@@ -42,7 +72,7 @@ export default {
   'home.emptyTitle': 'لا توجد مقالات منشورة بعد',
   'home.emptyDesc': 'عُد قريبًا — المقالات الأولى في الطريق.',
 
-  'dash.titleGuest': 'مرحبًا بك في مدونتي',
+  'dash.titleGuest': 'مرحبًا بك في {name}',
   'dash.titleAuth': 'مكتب كتابتك',
   'dash.descGuest': 'اقرأ أحدث المقالات، وتصفّح الأرشيف، أو سجّل الدخول لتبدأ الكتابة.',
   'dash.descAuth': 'مسجّل الدخول باسم {email}. تابع من حيث توقفت أو ابدأ شيئًا جديدًا.',

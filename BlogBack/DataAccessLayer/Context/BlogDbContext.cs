@@ -37,5 +37,6 @@ public class BlogDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Media> Medias { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<SiteSettings> SiteSettings { get; set; }
 
 }

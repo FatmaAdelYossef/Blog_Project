@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../../i18n';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { ROUTES } from '../../config/routes';
 import { Brand } from './Brand';
 import { LanguageToggle } from './LanguageToggle';
@@ -22,10 +23,12 @@ const CURRENT_YEAR = new Date().getFullYear();
  */
 export function AuthShell({ title, description, children, footer }) {
   const { t } = useLanguage();
+  const { settings } = useSiteSettings();
+  const siteName = settings?.siteName || t('app.name');
 
   useEffect(() => {
-    document.title = `${title} · ${t('app.name')}`;
-  }, [title, t]);
+    document.title = `${title} · ${siteName}`;
+  }, [title, siteName]);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -49,7 +52,7 @@ export function AuthShell({ title, description, children, footer }) {
               </svg>
             </span>
             <span className="font-serif text-xl font-semibold tracking-tight">
-              {t('app.name')}
+              {siteName}
             </span>
           </div>
 
@@ -60,7 +63,7 @@ export function AuthShell({ title, description, children, footer }) {
             <p className="mt-6 text-sm leading-relaxed text-paper/70">{t('shell.heroSub')}</p>
           </div>
 
-          <p className="text-xs text-paper/50">© {CURRENT_YEAR} {t('app.name')}</p>
+          <p className="text-xs text-paper/50">© {CURRENT_YEAR} {siteName}</p>
         </aside>
 
         <main className="flex flex-col justify-center px-5 py-10 sm:px-10 lg:px-14">

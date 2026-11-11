@@ -24,7 +24,8 @@ export const API_ENDPOINTS = {
   UPLOAD: {
     IMAGE: `${BASE_URL}/Upload/image`,
     DOWNLOAD: (fileName) => `${BASE_URL}/Upload/download/${fileName}`,
-  }
+  },
+  SITE_SETTINGS: `${BASE_URL}/SiteSettings`,
 };
 
 export default API_ENDPOINTS;

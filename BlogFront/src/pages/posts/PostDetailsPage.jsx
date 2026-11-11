@@ -693,7 +693,7 @@ export default function PostDetailsPage() {
 
       <Card padding="md" aria-busy={loading || undefined}>
         <Tabs value={activeTab} onChange={handleTabChange}>
-          <TabsList aria-label={t('posts.createContent')}>
+          <TabsList aria-label={t('post.tabsLabel')}>
             {TABS.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value}>
                 {t(tab.labelKey)}

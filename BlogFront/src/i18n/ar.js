@@ -155,6 +155,7 @@ export default {
   'post.save': 'حفظ',
   'post.cancel': 'إلغاء',
   'post.noCategory': 'بدون تصنيف',
+  'post.tabsLabel': 'محتوى المقال',
 
   'cat.eyebrow': 'المكتبة',
   'cat.title': 'التصنيفات',

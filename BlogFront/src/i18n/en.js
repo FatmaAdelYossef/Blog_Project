@@ -157,6 +157,7 @@ export default {
   'post.save': 'Save',
   'post.cancel': 'Cancel',
   'post.noCategory': 'No category',
+  'post.tabsLabel': 'Post content',
 
   'cat.eyebrow': 'Library',
   'cat.title': 'Categories',

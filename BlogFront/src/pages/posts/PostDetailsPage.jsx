@@ -1,461 +1,737 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import { ArrowLeft, Clock3, ExternalLink, FileQuestion, ImageIcon, LinkIcon, Music, Pencil, Plus, Trash2 } from 'lucide-react';
 import { postService } from '../../services/postService';
 import { uploadService } from '../../services/uploadService';
-import { categoryService } from '../../services/categoryService'; 
-import { jwtService } from '../../services/jwtService'; 
+import { categoryService } from '../../services/categoryService';
+import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n';
+import { sanitizeHtml } from '../../lib/sanitize';
+import { applySeo, excerptFromHtml, siteUrl } from '../../lib/seo';
+import { getReadingTime } from '../../lib/readingTime';
+import { PageHeader } from '../../components/PageHeader';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  Input,
+  Select,
+  Spinner,
+  Tabs,
+  TabsList,
+  TabsPanel,
+  TabsTrigger,
+} from '../../components/ui';
+
+const TABS = [
+  { value: 'details', labelKey: 'post.tabDetails' },
+  { value: 'Image', labelKey: 'post.tabImages', singularKey: 'post.singular.image' },
+  { value: 'Music', labelKey: 'post.tabMusic', singularKey: 'post.singular.music' },
+  { value: 'Link', labelKey: 'post.tabLinks', singularKey: 'post.singular.link' },
+];
+
+const MEDIA_TABS = TABS.filter((tab) => tab.value !== 'details');
+
+const MEDIA_ICONS = {
+  Image: <ImageIcon />,
+  Music: <Music />,
+  Link: <LinkIcon />,
+};
+
+const formatDate = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
 
 export default function PostDetailsPage() {
-    const { id } = useParams();
-    const navigate = useNavigate();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
-    const [post, setPost] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [isEditing, setIsEditing] = useState(false);
-    
-    // State للتحقق هل المستخدم مسجل دخول أم لا
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [post, setPost] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-    const [activeTab, setActiveTab] = useState('details'); // 'details' | 'Image' | 'Music' | 'Link'
+  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
 
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
-    
-    // State خاصة بالـ Category للبوست والقائمة الخاصة بها
-    const [categoryId, setCategoryId] = useState('');
-    const [categories, setCategories] = useState([]);
-    
-    const [newFiles, setNewFiles] = useState([]);
-    const [newTextUrl, setNewTextUrl] = useState('');
-    
-    const [editingMediaId, setEditingMediaId] = useState(null);
-    const [editTextUrl, setEditTextUrl] = useState('');
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [categoriesError, setCategoriesError] = useState('');
 
-    const [saving, setSaving] = useState(false);
+  const [newFiles, setNewFiles] = useState([]);
+  const [newTextUrl, setNewTextUrl] = useState('');
+  const [editingMediaId, setEditingMediaId] = useState(null);
+  const [editTextUrl, setEditTextUrl] = useState('');
 
-    useEffect(() => {
-        // التحقق من حالة تسجيل الدخول
-        const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                if (!jwtService.isTokenExpired(token)) {
-                    setIsAuthenticated(true);
-                }
-            } catch (e) {
-                setIsAuthenticated(false);
-            }
-        }
+  const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [mediaToDelete, setMediaToDelete] = useState(null);
 
-        fetchPostDetails();
-        fetchCategories(); // جلب الكاتيجوريز عند تحميل الصفحة
-    }, [id]);
+  const editorContainerRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-    const fetchPostDetails = async () => {
-        try {
-            setLoading(true);
-            const response = await postService.getPostById(id);
-            const postData = response.data || response;
-            setPost(postData);
-            setTitle(postData.title);
-            setContent(postData.content);
-            // ضبط قيمة الـ categoryId الحالية للبوست
-            setCategoryId(postData.categoryId || '');
-        } catch (error) {
-            console.error('Error fetching post details:', error);
-        } finally {
-            setLoading(false);
-        }
+  const loadPost = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+
+    try {
+      const data = await postService.getPostById(id);
+      const postData = data?.data ?? data;
+
+      setPost(postData);
+      setTitle(postData?.title ?? '');
+      setContent(postData?.content ?? '');
+      setCategoryId(postData?.categoryId ? String(postData.categoryId) : '');
+    } catch {
+      setPost(null);
+      setLoadError('Could not load this post. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    const load = async () => {
+      await loadPost();
     };
 
-    // دالة لجلب الكاتيجوريز للقائمة المنسدلة
-    const fetchCategories = async () => {
-        try {
-            const response = await categoryService.getAll();
-            const data = response.data || response;
-            setCategories(Array.isArray(data) ? data : data.items || []);
-        } catch (error) {
-            console.error('Error fetching categories:', error);
+    load();
+  }, [loadPost]);
+
+  // SEO + social preview for the post itself (layout skips this route).
+  useEffect(() => {
+    if (!post) return;
+
+    const firstImage = (post.medias ?? []).find((media) => media.mediaType === 'Image');
+    applySeo({
+      title: `${post.title} · My Blog`,
+      description: excerptFromHtml(post.content ?? ''),
+      canonical: siteUrl(`/posts/${post.id}`),
+      image: firstImage?.url ?? '',
+      type: 'article',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'BlogPosting',
+        headline: post.title,
+        description: excerptFromHtml(post.content ?? ''),
+        datePublished: post.createdAt,
+        inLanguage: 'en',
+        mainEntityOfPage: siteUrl(`/posts/${post.id}`) || undefined,
+      },
+    });
+  }, [post]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCategories = async () => {
+      try {
+        const data = await categoryService.getAll();
+        if (cancelled) return;
+
+        const list = Array.isArray(data) ? data : (data?.data ?? data?.items ?? []);
+        setCategories(Array.isArray(list) ? list : []);
+      } catch {
+        if (!cancelled) {
+          setCategoriesError(t('posts.categoriesError'));
         }
+      }
     };
 
-    const handleUpdatePost = async (e) => {
-        e.preventDefault();
-        if (!isAuthenticated) return;
-        try {
-            setSaving(true);
-            if (!title.trim() || !content.trim()) {
-                setSaving(false);
-                return;
-            }
+    loadCategories();
 
-            // إرسال الـ categoryId مع البيانات المحدثة
-            const updateData = { 
-                title, 
-                content, 
-                categoryId: categoryId ? Number(categoryId) : null 
-            };
-            
-            await postService.updatePost(id, updateData);
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
-            setIsEditing(false);
-            fetchPostDetails();
-        } catch (error) {
-            console.error('Error updating post:', error);
-        } finally {
-            setSaving(false);
-        }
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const container = editorContainerRef.current;
+    if (!container) return;
+
+    // ReactQuill does not forward aria-label, so name its contenteditable root.
+    // StrictMode remounts the editor in development, so reapply if it is replaced.
+    const labelEditor = () => {
+      const editor = container.querySelector('.ql-editor');
+      if (editor && editor.getAttribute('aria-label') !== 'Content') {
+        editor.setAttribute('aria-label', 'Content');
+      }
     };
 
-    const handleAddNewMedia = async () => {
-        if (!isAuthenticated) return;
-        try {
-            setSaving(true);
+    labelEditor();
 
-            if (activeTab === 'Image' && newFiles.length > 0) {
-                for (let i = 0; i < newFiles.length; i++) {
-                    const file = newFiles[i];
-                    const uploadedFileName = await uploadService.uploadImage(file);
-                    await postService.addMediaToPost(id, {
-                        url: uploadedFileName,
-                        mediaType: 'Image'
-                    });
-                }
-                setNewFiles([]);
-            } else if ((activeTab === 'Music' || activeTab === 'Link') && newTextUrl.trim()) {
-                await postService.addMediaToPost(id, {
-                    url: newTextUrl.trim(),
-                    mediaType: activeTab
-                });
-                setNewTextUrl('');
-            }
+    const observer = new MutationObserver(labelEditor);
+    observer.observe(container, { childList: true, subtree: true });
 
-            fetchPostDetails();
-        } catch (error) {
-            console.error('Error adding media:', error);
-        } finally {
-            setSaving(false);
+    return () => observer.disconnect();
+  }, [isEditing, activeTab]);
+
+  const getMedias = (mediaType) =>
+    (post?.medias ?? []).filter((media) => media.mediaType === mediaType);
+
+  const closeEditMode = () => {
+    if (saving) return;
+
+    setIsEditing(false);
+    setActionError('');
+    setTitle(post?.title ?? '');
+    setContent(post?.content ?? '');
+    setCategoryId(post?.categoryId ? String(post.categoryId) : '');
+    setNewFiles([]);
+    setNewTextUrl('');
+    setEditingMediaId(null);
+    setEditTextUrl('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleTabChange = (nextTab) => {
+    setActiveTab(nextTab);
+    setActionError('');
+    setNewFiles([]);
+    setNewTextUrl('');
+    setEditingMediaId(null);
+    setEditTextUrl('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleUpdatePost = async (event) => {
+    event.preventDefault();
+    if (!isAuthenticated) return;
+
+    const nextTitle = title.trim();
+    const nextContent = content.trim();
+
+    if (!nextTitle || !nextContent) {
+      setActionError(t('post.titleRequired'));
+      return;
+    }
+
+    setSaving(true);
+    setActionError('');
+
+    try {
+      await postService.updatePost(id, {
+        title: nextTitle,
+        content: nextContent,
+        categoryId: categoryId ? Number(categoryId) : null,
+      });
+
+      setIsEditing(false);
+      await loadPost();
+    } catch {
+      setActionError(t('post.saveError'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFileChange = (event) => {
+    const files = Array.from(event.target.files ?? []);
+    setNewFiles(files);
+    setActionError('');
+  };
+
+  const handleAddMedia = async (mediaType) => {
+    if (!isAuthenticated) return;
+
+    if (mediaType === 'Image' && newFiles.length === 0) {
+      setActionError(t('post.chooseImageError'));
+      return;
+    }
+
+    const textUrl = newTextUrl.trim();
+    if (mediaType !== 'Image' && !textUrl) {
+      setActionError(t('post.enterUrlError'));
+      return;
+    }
+
+    setSaving(true);
+    setActionError('');
+
+    try {
+      if (mediaType === 'Image') {
+        for (const file of newFiles) {
+          const uploadedFileName = await uploadService.uploadImage(file);
+          await postService.addMediaToPost(id, {
+            url: uploadedFileName,
+            mediaType,
+          });
         }
-    };
 
-    const handleDeleteMediaItem = async (mediaId) => {
-        if (!isAuthenticated) return;
-        try {
-            setSaving(true);
-            await postService.deleteMedia(mediaId);
-            fetchPostDetails();
-        } catch (error) {
-            console.error('Error deleting media:', error);
-        } finally {
-            setSaving(false);
+        setNewFiles([]);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      } else {
+        await postService.addMediaToPost(id, { url: textUrl, mediaType });
+        setNewTextUrl('');
+      }
+
+      await loadPost();
+    } catch {
+      setActionError(t('post.addMediaError'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateMediaItem = async (mediaId, mediaType) => {
+    if (!isAuthenticated) return;
+
+    const nextUrl = editTextUrl.trim();
+    if (!nextUrl) {
+      setActionError(t('post.enterUrlError'));
+      return;
+    }
+
+    setSaving(true);
+    setActionError('');
+
+    try {
+      await postService.updateMediaToPost(mediaId, { url: nextUrl, mediaType });
+      setEditingMediaId(null);
+      setEditTextUrl('');
+      await loadPost();
+    } catch {
+      setActionError(t('post.updateMediaError'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConfirmDeleteMedia = async () => {
+    if (!mediaToDelete) return;
+
+    setSaving(true);
+    setActionError('');
+
+    try {
+      await postService.deleteMedia(mediaToDelete.id);
+      await loadPost();
+    } catch {
+      setActionError(t('post.deleteMediaError'));
+    } finally {
+      setSaving(false);
+      setMediaToDelete(null);
+    }
+  };
+
+  if (loading && !post) {
+    return (
+      <div className="flex min-h-64 items-center justify-center" aria-busy="true">
+        <Spinner size="lg" label={t('post.loading')} />
+      </div>
+    );
+  }
+
+  if (!post) {
+    return (
+      <EmptyState
+        icon={<FileQuestion />}
+        title={loadError ? t('post.loadError') : t('post.notFound')}
+        description={loadError || t('post.notFoundDesc')}
+        action={
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              variant="secondary"
+              icon={<ArrowLeft className="rtl:-scale-x-100" />}
+              onClick={() => navigate('/posts')}
+            >
+              {t('post.backToPosts')}
+            </Button>
+            {loadError ? (
+              <Button onClick={loadPost} loading={loading}>
+                {t('post.tryAgain')}
+              </Button>
+            ) : null}
+          </div>
         }
-    };
+      />
+    );
+  }
 
-    const handleUpdateMediaItem = async (mediaId) => {
-        if (!isAuthenticated) return;
-        if (!editTextUrl.trim()) return;
-        try {
-            setSaving(true);
-            await postService.updateMediaToPost(mediaId, {
-                url: editTextUrl.trim(),
-                mediaType: activeTab
-            });
-            setEditingMediaId(null);
-            setEditTextUrl('');
-            fetchPostDetails();
-        } catch (error) {
-            console.error('Error updating media:', error);
-        } finally {
-            setSaving(false);
-        }
-    };
+  const publishedAt = formatDate(post.createdAt);
+  const readingMinutes = getReadingTime(post.content);
+  const readingTime = readingMinutes
+    ? t('post.minRead', { minutes: readingMinutes })
+    : '';
+  const mediaToDeleteTab = MEDIA_TABS.find((tab) => tab.value === mediaToDelete?.mediaType);
+  const tabLabel = (tab) => t(tab.labelKey);
+  const tabSingular = (tab) => (tab.singularKey ? t(tab.singularKey) : '');
 
-    if (loading) return <div style={{ textAlign: 'center', padding: '100px', color: '#666', fontSize: '18px' }}>Loading post details...</div>;
-    if (!post) return <div style={{ textAlign: 'center', padding: '100px', color: '#666', fontSize: '18px' }}>Post not found.</div>;
+  const renderMediaList = (tab) => {
+    const medias = getMedias(tab.value);
 
-    const currentTabMedias = activeTab === 'details' 
-        ? [] 
-        : (post.medias?.filter(m => m.mediaType === activeTab) || []);
+    if (medias.length === 0) {
+      return (
+        <EmptyState
+          icon={MEDIA_ICONS[tab.value]}
+          title={t('post.noMediaTitle', { label: tabLabel(tab) })}
+          description={t('post.noMedia', { label: tabLabel(tab) })}
+        />
+      );
+    }
 
     return (
-        <div style={{ width: '100%', minHeight: '100vh', margin: '0', padding: '30px', boxSizing: 'border-box', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', background: '#f8f9fa', display: 'flex', flexDirection: 'column' }}>
-            
-            {/* Header Navigation */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', width: '100%' }}>
-                <button 
-                    onClick={() => navigate(-1)}
-                    style={{ background: '#fff', color: '#333', border: '1px solid #ced4da', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}
+      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {medias.map((media, index) => (
+          <li key={media.id}>
+            <Card padding="sm" className="h-full">
+              {tab.value === 'Image' ? (
+                <img
+                  src={media.url}
+                  alt={t('post.imageAlt', { title: post.title, index: index + 1 })}
+                  loading="lazy"
+                  className="h-40 w-full rounded-md border border-line object-cover"
+                />
+              ) : (
+                <a
+                  href={media.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-start gap-2 break-all text-sm text-accent underline-offset-4 hover:underline"
                 >
-                    ← Back
-                </button>
-
-                {isAuthenticated && !isEditing && (
-                    <button 
-                        onClick={() => setIsEditing(true)}
-                        style={{ background: '#0d6efd', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', boxShadow: '0 2px 4px rgba(13, 110, 253, 0.2)' }}
-                    >
-                        Edit Post
-                    </button>
-                )}
-            </div>
-
-            {/* Main Full Width Card */}
-            <div style={{ background: '#fff', padding: '40px', borderRadius: '16px', border: '1px solid #eaeaea', boxShadow: '0 4px 20px rgba(0,0,0,0.02)', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                
-                {/* Tabs Header */}
-                <div style={{ display: 'flex', borderBottom: '2px solid #eaeaea', marginBottom: '30px', gap: '20px' }}>
-                    {[
-                        { id: 'details', label: 'Details' },
-                        { id: 'Image', label: 'Images' },
-                        { id: 'Music', label: 'Music' },
-                        { id: 'Link', label: 'Links' }
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => {
-                                setActiveTab(tab.id);
-                                setNewFiles([]);
-                                setNewTextUrl('');
-                                setEditingMediaId(null);
-                            }}
-                            style={{
-                                padding: '12px 24px',
-                                background: 'transparent',
-                                border: 'none',
-                                borderBottom: activeTab === tab.id ? '3px solid #0d6efd' : '3px solid transparent',
-                                marginBottom: '-2px',
-                                color: activeTab === tab.id ? '#0d6efd' : '#666',
-                                fontWeight: activeTab === tab.id ? '700' : '500',
-                                cursor: 'pointer',
-                                fontSize: '16px'
-                            }}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
-
-                {!isEditing || !isAuthenticated ? (
-                    <div style={{ flex: 1 }}>
-                        {activeTab === 'details' ? (
-                            <div>
-                                <h1 style={{ marginTop: '0', color: '#1a1a1a', fontSize: '32px', marginBottom: '15px' }}>{post.title}</h1>
-                                <div style={{ color: '#888', fontSize: '14px', marginBottom: '25px' }}>
-                                    Published on {new Date(post.createdAt).toLocaleDateString()} 
-                                    {post.categoryName && ` • Category: ${post.categoryName}`}
-                                </div>
-                                <div style={{ height: '1px', background: '#f0f0f0', marginBottom: '30px' }} />
-                                <div 
-                                    dangerouslySetInnerHTML={{ __html: post.content }} 
-                                    style={{ lineHeight: '1.8', color: '#333', fontSize: '16px' }}
-                                />
-                            </div>
-                        ) : (
-                            <div>
-                                <h3 style={{ fontSize: '20px', color: '#333', marginBottom: '20px' }}>{activeTab} Items</h3>
-                                {currentTabMedias.length > 0 ? (
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
-                                        {currentTabMedias.map((media, index) => (
-                                            <div key={media.id || index} style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid #eaeaea', background: '#f9f9f9', padding: '15px' }}>
-                                                {activeTab === 'Image' ? (
-                                                    <img src={media.url} alt="media" style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '6px', display: 'block' }} />
-                                                ) : (
-                                                    <a href={media.url} target="_blank" rel="noreferrer" style={{ color: '#0d6efd', wordBreak: 'break-all', fontSize: '15px', textDecoration: 'none' }}>
-                                                        🔗 {media.url}
-                                                    </a>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p style={{ color: '#888', fontSize: '16px' }}>No {activeTab.toLowerCase()} attached.</p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    /* ================= EDIT MODE ================= */
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        
-                        <div>
-                            {activeTab === 'details' ? (
-                                <form onSubmit={handleUpdatePost}>
-                                    <h2 style={{ marginTop: '0', marginBottom: '25px', color: '#1a1a1a', fontSize: '22px' }}>Edit Title, Content & Category</h2>
-                                    
-                                    {/* حقل التعديل: العنوان */}
-                                    <div style={{ marginBottom: '25px' }}>
-                                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', color: '#444', fontSize: '15px' }}>Title</label>
-                                        <input 
-                                            type="text" 
-                                            value={title} 
-                                            onChange={(e) => setTitle(e.target.value)} 
-                                            style={{ width: '100%', padding: '14px', boxSizing: 'border-box', borderRadius: '8px', border: '1px solid #ced4da', fontSize: '16px', outline: 'none' }}
-                                        />
-                                    </div>
-
-                                    {/* حقل التعديل: اختيار الفئة (Category Dropdown) */}
-                                    <div style={{ marginBottom: '25px' }}>
-                                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', color: '#444', fontSize: '15px' }}>Category</label>
-                                        <select
-                                            value={categoryId}
-                                            onChange={(e) => setCategoryId(e.target.value)}
-                                            style={{ width: '100%', padding: '14px', boxSizing: 'border-box', borderRadius: '8px', border: '1px solid #ced4da', fontSize: '16px', outline: 'none', background: '#fff', cursor: 'pointer' }}
-                                        >
-                                            <option value="">Select Category (اختر الفئة)</option>
-                                            {categories.map((cat) => (
-                                                <option key={cat.id} value={cat.id}>
-                                                    {cat.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* حقل التعديل: المحتوى */}
-                                    <div style={{ marginBottom: '30px' }}>
-                                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', color: '#444', fontSize: '15px' }}>Content</label>
-                                        <div style={{ marginBottom: '50px' }}>
-                                            <ReactQuill 
-                                                theme="snow" 
-                                                value={content} 
-                                                onChange={setContent} 
-                                                style={{ background: '#fff', borderRadius: '8px', height: '250px' }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <button 
-                                        type="submit" 
-                                        disabled={saving}
-                                        style={{ background: '#198754', color: '#fff', padding: '12px 30px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '16px' }}
-                                    >
-                                        {saving ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </form>
-                            ) : (
-                                <div>
-                                    <h2 style={{ marginTop: '0', marginBottom: '25px', color: '#1a1a1a', fontSize: '22px' }}>Manage {activeTab}</h2>
-                                    
-                                    <div style={{ marginBottom: '30px' }}>
-                                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', color: '#444', fontSize: '15px' }}>Current {activeTab}</label>
-                                        {post.medias && post.medias.filter(m => m.mediaType === activeTab).length > 0 ? (
-                                            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                                                {post.medias.map((media) => {
-                                                    if (media.mediaType !== activeTab) return null;
-                                                    return (
-                                                        <div key={media.id} style={{ border: '1px solid #eaeaea', borderRadius: '10px', overflow: 'hidden', background: '#fafafa', width: activeTab === 'Image' ? '180px' : '280px', padding: '10px' }}>
-                                                            {activeTab === 'Image' ? (
-                                                                <img src={media.url} alt="media" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '6px', display: 'block', marginBottom: '8px' }} />
-                                                            ) : (
-                                                                <div>
-                                                                    {editingMediaId === media.id ? (
-                                                                        <div style={{ marginBottom: '8px' }}>
-                                                                            <input 
-                                                                                type="text" 
-                                                                                value={editTextUrl} 
-                                                                                onChange={(e) => setEditTextUrl(e.target.value)}
-                                                                                style={{ width: '100%', padding: '8px', boxSizing: 'border-box', marginBottom: '6px', fontSize: '13px' }}
-                                                                            />
-                                                                            <div style={{ display: 'flex', gap: '5px' }}>
-                                                                                <button onClick={() => handleUpdateMediaItem(media.id)} style={{ background: '#198754', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Update</button>
-                                                                                <button onClick={() => setEditingMediaId(null)} style={{ background: '#6c757d', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Cancel</button>
-                                                                            </div>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <p style={{ fontSize: '13px', wordBreak: 'break-all', margin: '0 0 8px 0', color: '#333' }}>{media.url}</p>
-                                                                    )}
-                                                                </div>
-                                                            )}
-
-                                                            {activeTab !== 'Image' && editingMediaId !== media.id && (
-                                                                <button 
-                                                                    type="button" 
-                                                                    onClick={() => { setEditingMediaId(media.id); setEditTextUrl(media.url); }}
-                                                                    style={{ background: '#ffc107', color: '#000', border: 'none', width: '100%', padding: '6px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', marginBottom: '5px' }}
-                                                                >
-                                                                    Edit URL
-                                                                </button>
-                                                            )}
-
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => handleDeleteMediaItem(media.id)}
-                                                                style={{ background: '#dc3545', color: '#fff', border: 'none', width: '100%', padding: '6px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        ) : (
-                                            <p style={{ color: '#888', fontSize: '15px', margin: '0' }}>No {activeTab.toLowerCase()} attached.</p>
-                                        )}
-                                    </div>
-
-                                    <div style={{ marginBottom: '30px' }}>
-                                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', color: '#444', fontSize: '15px' }}>
-                                            Add New {activeTab} {activeTab === 'Image' ? '(Upload File)' : '(String URL)'}
-                                        </label>
-                                        
-                                        {activeTab === 'Image' ? (
-                                            <div>
-                                                <div style={{ border: '2px dashed #ced4da', padding: '30px', borderRadius: '10px', textAlign: 'center', background: '#f8f9fa', marginBottom: '15px' }}>
-                                                    <input 
-                                                        type="file" 
-                                                        multiple 
-                                                        onChange={(e) => setNewFiles(e.target.files)} 
-                                                        style={{ fontSize: '15px' }}
-                                                    />
-                                                </div>
-                                                {newFiles.length > 0 && (
-                                                    <button 
-                                                        type="button"
-                                                        onClick={handleAddNewMedia}
-                                                        disabled={saving}
-                                                        style={{ background: '#198754', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-                                                    >
-                                                        {saving ? 'Uploading...' : 'Upload & Add Images'}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div style={{ display: 'flex', gap: '10px' }}>
-                                                <input 
-                                                    type="text" 
-                                                    placeholder={`Enter ${activeTab} URL...`}
-                                                    value={newTextUrl}
-                                                    onChange={(e) => setNewTextUrl(e.target.value)}
-                                                    style={{ flex: 1, padding: '12px', boxSizing: 'border-box', borderRadius: '8px', border: '1px solid #ced4da', fontSize: '15px', outline: 'none' }}
-                                                />
-                                                <button 
-                                                    type="button"
-                                                    onClick={handleAddNewMedia}
-                                                    disabled={saving}
-                                                    style={{ background: '#198754', color: '#fff', border: 'none', padding: '0 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-                                                >
-                                                    {saving ? 'Adding...' : 'Add'}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '15px', borderTop: '1px solid #eaeaea', paddingTop: '25px', marginTop: '20px' }}>
-                            <button 
-                                type="button" 
-                                onClick={() => setIsEditing(false)}
-                                style={{ background: '#6c757d', color: '#fff', padding: '12px 30px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '16px' }}
-                            >
-                                Close Edit Mode
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
+                  <ExternalLink aria-hidden="true" className="mt-0.5 size-4 shrink-0 rtl:-scale-x-100" />
+                  <span>{media.url}</span>
+                </a>
+              )}
+            </Card>
+          </li>
+        ))}
+      </ul>
     );
+  };
+
+  const renderMediaEditor = (tab) => {
+    const medias = getMedias(tab.value);
+
+    return (
+      <div className="flex flex-col gap-8">
+        <section className="space-y-3">
+          <h3 className="text-sm font-medium text-ink">
+            {t('post.currentMedia', { label: tabLabel(tab) })}
+          </h3>
+
+          {medias.length === 0 ? (
+            <p className="text-sm text-ink-muted">
+              {t('post.nothingYet', { singular: tabSingular(tab) })}
+            </p>
+          ) : (
+            <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {medias.map((media, index) => (
+                <li key={media.id}>
+                  <Card padding="sm" className="h-full">
+                    <div className="flex h-full flex-col gap-3">
+                      {tab.value === 'Image' ? (
+                        <img
+                          src={media.url}
+                          alt={t('post.imageAlt', { title: post.title, index: index + 1 })}
+                          loading="lazy"
+                          className="h-36 w-full rounded-md border border-line object-cover"
+                        />
+                      ) : editingMediaId === media.id ? (
+                        <Input
+                          aria-label={t('post.editMediaUrl', { singular: tabSingular(tab) })}
+                          value={editTextUrl}
+                          onChange={(event) => setEditTextUrl(event.target.value)}
+                          placeholder="https://…"
+                        />
+                      ) : (
+                        <p className="flex-1 break-all text-sm text-ink-muted">{media.url}</p>
+                      )}
+
+                      {tab.value !== 'Image' && editingMediaId === media.id ? (
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            loading={saving}
+                            onClick={() => handleUpdateMediaItem(media.id, tab.value)}
+                          >
+                            {t('post.save')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={saving}
+                            onClick={() => {
+                              setEditingMediaId(null);
+                              setEditTextUrl('');
+                            }}
+                          >
+                            {t('post.cancel')}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="mt-auto flex flex-wrap gap-2">
+                          {tab.value !== 'Image' ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              icon={<Pencil />}
+                              aria-label={t('post.editMediaUrl', { singular: tabSingular(tab) })}
+                              onClick={() => {
+                                setEditingMediaId(media.id);
+                                setEditTextUrl(media.url);
+                              }}
+                            >
+                              {t('post.editUrl')}
+                            </Button>
+                          ) : null}
+
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            icon={<Trash2 />}
+                            aria-label={t('post.deleteSingular', {
+                              singular: tabSingular(tab),
+                              index: index + 1,
+                            })}
+                            onClick={() => setMediaToDelete(media)}
+                          >
+                            {t('posts.deleteConfirm')}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="space-y-3" aria-labelledby={`add-${tab.value}-heading`}>
+          <h3 id={`add-${tab.value}-heading`} className="text-sm font-medium text-ink">
+            {tab.value === 'Image'
+              ? t('post.addImages')
+              : t('post.addUrl', { singular: tabSingular(tab) })}
+          </h3>
+
+          {tab.value === 'Image' ? (
+            <div className="flex flex-col gap-4 rounded-lg border border-dashed border-line bg-surface-muted p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <label htmlFor="new-media-files" className="text-sm font-medium text-ink">
+                  {t('post.chooseImages')}
+                </label>
+                <input
+                  id="new-media-files"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                  className="mt-2 block w-full text-sm text-ink-muted file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-surface hover:file:bg-accent-hover"
+                />
+                <p className="mt-1 text-xs text-ink-muted">{t('post.chooseImagesHint')}</p>
+              </div>
+
+              <Button
+                icon={<Plus />}
+                loading={saving}
+                disabled={newFiles.length === 0}
+                onClick={() => handleAddMedia(tab.value)}
+              >
+                {t('post.uploadAndAdd')}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <Input
+                label={t('post.mediaUrl', { label: tabLabel(tab) })}
+                value={newTextUrl}
+                onChange={(event) => setNewTextUrl(event.target.value)}
+                placeholder="https://…"
+                className="sm:flex-1"
+              />
+              <Button
+                icon={<Plus />}
+                loading={saving}
+                onClick={() => handleAddMedia(tab.value)}
+              >
+                {t('post.addSingular', { singular: tabSingular(tab) })}
+              </Button>
+            </div>
+          )}
+        </section>
+      </div>
+    );
+  };
+
+  const renderDetailsView = () => (
+    <article className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-ink-muted">
+        {publishedAt ? (
+          <time dateTime={post.createdAt}>{t('post.published', { date: publishedAt })}</time>
+        ) : null}
+        {post.categoryName ? <Badge variant="accent">{post.categoryName}</Badge> : null}
+        {readingTime ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Clock3 aria-hidden="true" className="size-3.5" />
+            {readingTime}
+          </span>
+        ) : null}
+      </div>
+
+      <hr className="border-line" />
+
+      {post.content ? (
+        <div
+          className="prose-editorial"
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
+        />
+      ) : (
+        <p className="text-sm text-ink-muted">{t('post.noContent')}</p>
+      )}
+    </article>
+  );
+
+  const renderDetailsEditor = () => (
+    <form onSubmit={handleUpdatePost} className="flex flex-col gap-5" noValidate>
+      <Input
+        label={t('posts.createPostTitle')}
+        required
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        placeholder={t('posts.createPostTitlePlaceholder')}
+      />
+
+      <Select
+        label={t('posts.createCategory')}
+        value={categoryId}
+        onChange={(event) => setCategoryId(event.target.value)}
+      >
+        <option value="">{t('post.noCategory')}</option>
+        {categories.map((category) => (
+          <option key={category.id} value={category.id}>
+            {category.name}
+          </option>
+        ))}
+      </Select>
+
+      <fieldset className="flex min-w-0 flex-col gap-1.5">
+        <legend className="text-sm font-medium text-ink">
+          {t('posts.createContent')}
+          <span aria-hidden="true" className="ml-0.5 text-danger">
+            *
+          </span>
+          <span className="sr-only"> ({t('post.required')})</span>
+        </legend>
+        <div
+          ref={editorContainerRef}
+          className="overflow-hidden rounded-md border border-line bg-surface [&_.ql-container]:min-h-40 [&_.ql-container]:border-0 [&_.ql-toolbar]:border-0 [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-line"
+        >
+          <ReactQuill theme="snow" value={content} onChange={setContent} />
+        </div>
+      </fieldset>
+
+      <div>
+        <Button type="submit" loading={saving} loadingLabel={t('post.saving')}>
+          {t('post.saveChanges')}
+        </Button>
+      </div>
+    </form>
+  );
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow={isEditing ? t('post.editing') : t('page.post')}
+        title={post.title}
+        description={
+          post.categoryName ? t('post.filedUnder', { category: post.categoryName }) : undefined
+        }
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              icon={<ArrowLeft className="rtl:-scale-x-100" />}
+              onClick={() => navigate(-1)}
+            >
+              {t('post.back')}
+            </Button>
+
+            {isAuthenticated && !isEditing ? (
+              <Button
+                icon={<Pencil />}
+                onClick={() => {
+                  setActionError('');
+                  setIsEditing(true);
+                }}
+              >
+                {t('post.editPost')}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+
+      {actionError ? (
+        <Alert variant="danger" onDismiss={() => setActionError('')}>
+          {actionError}
+        </Alert>
+      ) : null}
+
+      {categoriesError ? (
+        <Alert variant="warning" onDismiss={() => setCategoriesError('')}>
+          {categoriesError}
+        </Alert>
+      ) : null}
+
+      <Card padding="md" aria-busy={loading || undefined}>
+        <Tabs value={activeTab} onChange={handleTabChange}>
+          <TabsList aria-label={t('post.tabsLabel')}>
+            {TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {t(tab.labelKey)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          <TabsPanel value="details">
+            {isEditing ? renderDetailsEditor() : renderDetailsView()}
+          </TabsPanel>
+
+          {MEDIA_TABS.map((tab) => (
+            <TabsPanel key={tab.value} value={tab.value}>
+              {isEditing ? renderMediaEditor(tab) : renderMediaList(tab)}
+            </TabsPanel>
+          ))}
+        </Tabs>
+
+        {isEditing ? (
+          <div className="mt-6 border-t border-line pt-5">
+            <Button variant="secondary" onClick={closeEditMode} disabled={saving}>
+              {t('post.closeEdit')}
+            </Button>
+          </div>
+        ) : null}
+      </Card>
+
+      <ConfirmDialog
+        open={Boolean(mediaToDelete)}
+        title={t('post.removeMediaTitle', {
+          singular: mediaToDeleteTab ? tabSingular(mediaToDeleteTab) : '',
+        })}
+        description={t('post.removeMediaDesc')}
+        confirmLabel={t('post.removeConfirm')}
+        loading={saving}
+        onCancel={() => setMediaToDelete(null)}
+        onConfirm={handleConfirmDeleteMedia}
+      />
+    </div>
+  );
 }

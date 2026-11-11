@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessLogicLayer.Services.Authorization;
+using BusinessLogicLayer.Services.Upload;
 using DataAccessLayer.Context;
 using DataAccessLayer.DTOs.Medias;
 using DataAccessLayer.DTOs.Pagenation;
@@ -17,21 +19,31 @@ public class PostService : IPostService
 {
     private readonly BlogDbContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IUploadService _uploadService;
 
-    public PostService(BlogDbContext context, IHttpContextAccessor httpContextAccessor)
+    public PostService(BlogDbContext context, IHttpContextAccessor httpContextAccessor, IUploadService uploadService)
     {
         _context = context;
         _httpContextAccessor = httpContextAccessor;
+        _uploadService = uploadService;
     }
 
     public async Task<PostResponseDto> CreatePostAsync(CreatePostDto dto)
     {
+        var authorId = PostAccess.GetUserId(_httpContextAccessor.HttpContext?.User);
+        if (string.IsNullOrEmpty(authorId))
+            throw new UnauthorizedAccessException("Authentication is required.");
+
+        if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId))
+            throw new InvalidOperationException("The selected category does not exist.");
+
         var post = new DataAccessLayer.Models.Post
         {
             Title = dto.Title,
             Content = dto.Content,
             CreatedAt = DateTime.UtcNow,
             CategoryId = dto.CategoryId,
+            AuthorId = authorId,
             Medias = dto.Medias.Select(m => new DataAccessLayer.Models.Media
             {
                 Url = m.Url,
@@ -44,35 +56,29 @@ public class PostService : IPostService
 
         var request = _httpContextAccessor.HttpContext?.Request;
         var baseUrl = $"{request?.Scheme}://{request?.Host}";
+        var categoryName = await GetCategoryNameAsync(post.CategoryId);
 
-        return new PostResponseDto
-        {
-            Id = post.Id,
-            Title = post.Title,
-            Content = post.Content,
-            CreatedAt = post.CreatedAt,
-            Medias = post.Medias.Select(m => new MediaResponseDto
-            {
-                Id = m.Id,
-                Url = PublicHelperShared.IsGuidFileName(m.Url)
-                    ? $"{baseUrl}/api/Upload/download/{m.Url}"
-                    : m.Url,
-                MediaType = m.MediaType
-            }).ToList()
-        };
+        return MapToPostResponseDto(post, baseUrl, categoryName);
     }
 
     public async Task<PagedResult<PostResponseDto>> GetAllPostsAsync(GetPostsDto dto)
     {
-        var totalCount = await _context.Posts.CountAsync();
-
         var query = _context.Posts.AsQueryable();
 
         if (dto.CategoryId.HasValue) query = query.Where(e => e.CategoryId == dto.CategoryId);
-        if (!string.IsNullOrWhiteSpace(dto.Title)) query = query.Where(e => e.Title == dto.Title);
+
+        var title = dto.Title?.Trim();
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            var term = title.ToLower();
+            query = query.Where(e => e.Title.ToLower().Contains(term));
+        }
+
+        var totalCount = await query.CountAsync();
 
         var posts = await query
             .Include(p => p.Medias)
+            .Include(p => p.Category)
             .OrderByDescending(p => p.CreatedAt)
             .Skip((dto.PageNumber - 1) * dto.PageSize)
             .Take(dto.PageSize)
@@ -81,20 +87,9 @@ public class PostService : IPostService
         var request = _httpContextAccessor.HttpContext?.Request;
         var baseUrl = $"{request?.Scheme}://{request?.Host}";
 
-        var postDtos = posts.Select(p => new PostResponseDto
-        {
-            Id = p.Id,
-            Title = p.Title,
-            Content = p.Content,
-            CreatedAt = p.CreatedAt,
-            CategoryId = p.CategoryId,
-            Medias = p.Medias!.Select(m => new MediaResponseDto
-            {
-                Id = m.Id,
-                Url = PublicHelperShared.IsGuidFileName(m.Url) ? $"{baseUrl}/api/Upload/download/{m.Url}" : m.Url,
-                MediaType = m.MediaType
-            }).ToList()
-        }).ToList();
+        var postDtos = posts
+            .Select(p => MapToPostResponseDto(p, baseUrl, p.Category?.Name))
+            .ToList();
 
         return new PagedResult<PostResponseDto>
         {
@@ -105,42 +100,48 @@ public class PostService : IPostService
         };
     }
 
-    public async Task<PostResponseDto> GetPostByIdAsync(int id)
+    public async Task<IReadOnlyList<int>> GetPostIdsAsync()
+    {
+        return await _context.Posts
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => p.Id)
+            .ToListAsync();
+    }
+
+    public async Task<PostResponseDto?> GetPostByIdAsync(int id)
     {
         var post = await _context.Posts
             .Include(p => p.Medias)
+            .Include(p => p.Category)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (post == null)
-            throw new KeyNotFoundException("Post not found.");
+            return null;
 
         var request = _httpContextAccessor.HttpContext?.Request;
         var baseUrl = $"{request?.Scheme}://{request?.Host}";
 
-        return new PostResponseDto
-        {
-            Id = post.Id,
-            Title = post.Title,
-            Content = post.Content,
-            CreatedAt = post.CreatedAt,
-            CategoryId = post.CategoryId,
-            Medias = post.Medias!.Select(m => new MediaResponseDto
-            {
-                Id = m.Id,
-                Url = PublicHelperShared.IsGuidFileName(m.Url) ? $"{baseUrl}/api/Upload/download/{m.Url}" : m.Url,
-                MediaType = m.MediaType
-            }).ToList()
-        };
+        return MapToPostResponseDto(post, baseUrl, post.Category?.Name);
     }
 
     public async Task<PostResponseDto?> UpdatePostAsync(int id, UpdatePostDto dto)
     {
         var post = await _context.Posts
             .Include(p => p.Medias)
+            .Include(p => p.Category)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (post == null)
             return null;
+
+        PostAccess.EnsureCanModify(_httpContextAccessor.HttpContext?.User, post.AuthorId);
+
+        if (dto.CategoryId.HasValue
+            && dto.CategoryId.Value != post.CategoryId
+            && !await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId.Value))
+        {
+            throw new InvalidOperationException("The selected category does not exist.");
+        }
 
         post.Title = dto.Title;
         post.Content = dto.Content;
@@ -151,10 +152,57 @@ public class PostService : IPostService
 
         var request = _httpContextAccessor.HttpContext?.Request;
         var baseUrl = $"{request?.Scheme}://{request?.Host}";
+        var categoryName = await GetCategoryNameAsync(post.CategoryId);
 
+        return MapToPostResponseDto(post, baseUrl, categoryName);
+    }
+
+    public async Task<bool> DeletePostAsync(int id)
+    {
+        var post = await _context.Posts
+            .Include(p => p.Medias)
+            .FirstOrDefaultAsync(p => p.Id == id);
+        if (post == null)
+            return false;
+
+        PostAccess.EnsureCanModify(_httpContextAccessor.HttpContext?.User, post.AuthorId);
+
+        var uploadedFileUrls = post.Medias?
+            .Select(m => m.Url)
+            .ToList() ?? new List<string?>();
+
+        _context.Posts.Remove(post);
+        await _context.SaveChangesAsync();
+
+        // Best-effort cleanup of files uploaded through /api/Upload; external
+        // media URLs are skipped inside TryDeleteUploadedFile.
+        foreach (var url in uploadedFileUrls)
+        {
+            _uploadService.TryDeleteUploadedFile(url);
+        }
+
+        return true;
+    }
+
+    private async Task<string?> GetCategoryNameAsync(int categoryId)
+    {
+        return await _context.Categories
+            .Where(c => c.Id == categoryId)
+            .Select(c => c.Name)
+            .FirstOrDefaultAsync();
+    }
+
+    private static PostResponseDto MapToPostResponseDto(
+        DataAccessLayer.Models.Post post,
+        string baseUrl,
+        string? categoryName)
+    {
         return new PostResponseDto
         {
             Id = post.Id,
+            CategoryId = post.CategoryId,
+            CategoryName = categoryName,
+            AuthorId = post.AuthorId,
             Title = post.Title,
             Content = post.Content,
             CreatedAt = post.CreatedAt,
@@ -163,22 +211,10 @@ public class PostService : IPostService
                 Id = m.Id,
                 Url = PublicHelperShared.IsGuidFileName(m.Url)
                     ? $"{baseUrl}/api/Upload/download/{m.Url}"
-                    : m.Url,
+                    : m.Url ?? string.Empty,
                 MediaType = m.MediaType
             }).ToList()
         };
-    }
-
-    public async Task<bool> DeletePostAsync(int id)
-    {
-        var post = await _context.Posts.FindAsync(id);
-        if (post == null)
-            return false; 
-
-        _context.Posts.Remove(post);
-        await _context.SaveChangesAsync();
-
-        return true;
     }
 
 }

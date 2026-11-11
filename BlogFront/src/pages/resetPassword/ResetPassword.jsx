@@ -1,139 +1,142 @@
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { ROUTES } from '../../config/routes';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../../services/authService';
+import { useLanguage } from '../../i18n';
+import { ROUTES } from '../../config/routes';
+import { applySeo } from '../../lib/seo';
+import { AuthShell } from '../../components/layout/AuthShell';
+import { Alert, Button, PasswordInput } from '../../components/ui';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  useEffect(() => {
+    // Private route: keep crawlers out of the head.
+    applySeo({ title: `${t('reset.submit')} · ${t('app.name')}`, noindex: true });
+  }, [t]);
 
   const emailFromUrl = searchParams.get('email') || '';
   const tokenFromUrl = searchParams.get('token') || '';
+  const missingParams = !emailFromUrl || !tokenFromUrl;
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!emailFromUrl || !tokenFromUrl) {
-      setError('Invalid or missing password reset link parameters.');
-    }
-  }, [emailFromUrl, tokenFromUrl]);
+    if (!success) return undefined;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const timer = setTimeout(() => navigate(ROUTES.LOGIN), 3000);
+    return () => clearTimeout(timer);
+  }, [success, navigate]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
 
     if (newPassword !== confirmPassword) {
-      setError('New passwords do not match.');
+      setError(t('reset.mismatch'));
       return;
     }
 
     if (newPassword.length < 2) {
-      setError('Password must be at least 2 characters long.');
+      setError(t('reset.tooShort'));
       return;
     }
 
     setLoading(true);
 
-    const resetPasswordDto = {
-      Email: emailFromUrl,
-      Token: tokenFromUrl,
-      NewPassword: newPassword,
-    };
-
     try {
-      await authService.resetPassword(resetPasswordDto);
-      
-      console.log('Reset Password Payload:', resetPasswordDto); 
+      await authService.resetPassword({
+        Email: emailFromUrl,
+        Token: tokenFromUrl,
+        NewPassword: newPassword,
+      });
       setSuccess(true);
-      
-      setTimeout(() => {
-        navigate(ROUTES.LOGIN);
-      }, 3000);
-    } catch (err) {
-      setError('Failed to reset password. The link may have expired or is invalid.');
+    } catch {
+      setError(t('reset.failed'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
-        
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Reset Password</h2>
-          <p className="text-gray-500 text-sm mt-1">
-            Please enter your new password below.
-          </p>
+    <AuthShell
+      title={success ? t('reset.titleSuccess') : t('reset.title')}
+      description={success ? t('reset.descSuccess') : t('reset.desc')}
+      footer={
+        <p>
+          {t('reset.needLink')}{' '}
+          <Link
+            to={ROUTES.FORGOT_PASSWORD}
+            className="font-medium text-accent underline-offset-4 hover:underline"
+          >
+            {t('reset.requestAnother')}
+          </Link>
+        </p>
+      }
+    >
+      {success ? (
+        <div className="space-y-5">
+          <Alert variant="success" title={t('reset.allSet')}>
+            {t('reset.successBody')}
+          </Alert>
+
+          <Button size="lg" className="w-full" onClick={() => navigate(ROUTES.LOGIN)}>
+            {t('reset.goToSignIn')}
+          </Button>
         </div>
+      ) : missingParams ? (
+        <div className="space-y-5">
+          <Alert variant="danger" title={t('reset.invalidLink')}>
+            {t('reset.invalidLinkBody')}
+          </Alert>
 
-        {!success ? (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="flex items-center gap-2 bg-red-50 text-red-600 p-3 rounded-xl text-sm">
-                <AlertCircle size={20} className="shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={() => navigate(ROUTES.FORGOT_PASSWORD)}
+          >
+            {t('reset.requestNewLink')}
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <PasswordInput
+            label={t('reset.newPassword')}
+            name="new-password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            required
+          />
 
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-              <input
-                type="password"
-                placeholder="New Password"
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-            </div>
+          <PasswordInput
+            label={t('reset.confirmPassword')}
+            name="confirm-password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            required
+          />
 
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-              <input
-                type="password"
-                placeholder="Confirm New Password"
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
+          {error ? <Alert variant="danger">{error}</Alert> : null}
 
-            <button
-              disabled={loading || !emailFromUrl || !tokenFromUrl}
-              type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center shadow-md hover:shadow-lg"
-            >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : "Reset Password"}
-            </button>
-          </form>
-        ) : (
-          <div className="text-center py-6 space-y-4">
-            <div className="flex justify-center text-green-500">
-              <CheckCircle2 size={56} />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800">Password Reset Successful</h3>
-            <p className="text-gray-500 text-sm">
-              Your password has been successfully updated. You will be redirected to the login page shortly.
-            </p>
-            <button
-              onClick={() => navigate(ROUTES.LOGIN)}
-              className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition-all"
-            >
-              Go to Login now
-            </button>
-          </div>
-        )}
-
-      </div>
-    </div>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            loading={loading}
+            loadingLabel={t('reset.resetting')}
+          >
+            {t('reset.submit')}
+          </Button>
+        </form>
+      )}
+    </AuthShell>
   );
 }

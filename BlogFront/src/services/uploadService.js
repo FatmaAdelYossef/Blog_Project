@@ -18,6 +18,6 @@ export const uploadService = {
     },
 
     getDownloadUrl: (fileName) => {
-        return `${axiosInstance.defaults.baseURL}/Upload/download/${fileName}`;
+        return API_ENDPOINTS.UPLOAD.DOWNLOAD(fileName);
     }
 };

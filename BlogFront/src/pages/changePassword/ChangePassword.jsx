@@ -1,10 +1,11 @@
-
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Lock, Loader2, ArrowLeft } from 'lucide-react';
-import { ROUTES } from '../../config/routes';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { authService } from '../../services/authService';
-
+import { useLanguage } from '../../i18n';
+import { ROUTES } from '../../config/routes';
+import { Alert, Button, Card, PasswordInput } from '../../components/ui';
+import { PageHeader } from '../../components/PageHeader';
 
 export default function ChangePassword() {
   const [formData, setFormData] = useState({
@@ -16,104 +17,111 @@ export default function ChangePassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (!success) return undefined;
+
+    const timer = setTimeout(() => navigate(ROUTES.HOME), 2000);
+    return () => clearTimeout(timer);
+  }, [success, navigate]);
+
+  const handleChange = (field) => (event) => {
+    setFormData((current) => ({ ...current, [field]: event.target.value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
     setSuccess('');
 
     if (formData.NewPassword !== formData.confirmPassword) {
-      setError('New passwords do not match.');
+      setError(t('reset.mismatch'));
       return;
     }
 
     if (formData.NewPassword.length < 2) {
-      setError('Password must be at least 2 characters long.');
+      setError(t('reset.tooShort'));
       return;
     }
 
     setLoading(true);
+
     try {
-      await authService.changePassword(formData);
-      
-      setSuccess('Password changed successfully!');
-      setTimeout(() => {
-        navigate(ROUTES.HOME);
-      }, 2000);
-    } catch (err) {
-      setError('Failed to change password. Please check your current password.');
+      // The API contract only accepts the current and new password; the
+      // confirmation field is a client-side check and must not be sent.
+      await authService.changePassword({
+        CurrentPassword: formData.CurrentPassword,
+        NewPassword: formData.NewPassword,
+      });
+      setSuccess(t('cp.success'));
+    } catch {
+      setError(t('cp.failed'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
-        
-        <div className="flex items-center mb-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-gray-400 hover:text-gray-600 transition-colors mr-2"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h2 className="text-2xl font-bold text-gray-800">Change Password</h2>
-        </div>
+    <div className="mx-auto w-full max-w-2xl space-y-8">
+      <PageHeader
+        eyebrow={t('cp.eyebrow')}
+        title={t('cp.title')}
+        description={t('cp.desc')}
+      />
 
-        <p className="text-gray-500 mb-6 text-sm">
-          Please enter your current password and a new secure password below.
-        </p>
-
+      <Card padding="lg">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-            <input
-              type="password"
-              placeholder="Current Password"
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-              value={formData.CurrentPassword}
-              onChange={(e) => setFormData({ ...formData, CurrentPassword: e.target.value })}
-              required
-            />
+          <PasswordInput
+            label={t('cp.current')}
+            name="current-password"
+            autoComplete="current-password"
+            value={formData.CurrentPassword}
+            onChange={handleChange('CurrentPassword')}
+            required
+          />
+
+          <PasswordInput
+            label={t('cp.new')}
+            name="new-password"
+            autoComplete="new-password"
+            value={formData.NewPassword}
+            onChange={handleChange('NewPassword')}
+            required
+          />
+
+          <PasswordInput
+            label={t('cp.confirm')}
+            name="confirm-password"
+            autoComplete="new-password"
+            value={formData.confirmPassword}
+            onChange={handleChange('confirmPassword')}
+            required
+          />
+
+          {error ? <Alert variant="danger">{error}</Alert> : null}
+          {success ? <Alert variant="success">{success}</Alert> : null}
+
+          <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <Link
+              to={ROUTES.HOME}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+            >
+              <ArrowLeft aria-hidden="true" className="size-4 rtl:-scale-x-100" />
+              {t('cp.back')}
+            </Link>
+
+            <Button
+              type="submit"
+              size="lg"
+              loading={loading}
+              loadingLabel={t('cp.updating')}
+            >
+              {t('cp.submit')}
+            </Button>
           </div>
-
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-            <input
-              type="password"
-              placeholder="New Password"
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-              value={formData.NewPassword}
-              onChange={(e) => setFormData({ ...formData, NewPassword: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-            <input
-              type="password"
-              placeholder="Confirm New Password"
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              required
-            />
-          </div>
-
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-          {success && <p className="text-green-600 text-sm text-center font-medium">{success}</p>}
-
-          <button
-            disabled={loading}
-            type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center shadow-md hover:shadow-lg"
-          >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : "Update Password"}
-          </button>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }

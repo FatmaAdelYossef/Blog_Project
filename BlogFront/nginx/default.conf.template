@@ -1,0 +1,58 @@
+# Expands ${PORT} and ${API_ORIGIN} from the container environment on start
+# (the official nginx image envsubst's /etc/nginx/templates/*.template).
+server {
+    listen ${PORT};
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml text/plain;
+    gzip_min_length 512;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; font-src 'self'; media-src 'self' http: https:; connect-src 'self' ${API_ORIGIN}; object-src 'none'; frame-ancestors 'self'; base-uri 'self'" always;
+
+    location = /healthz {
+        return 200 "ok\n";
+    }
+
+    # Crawl files are served by the API (Frontend:Origin is their single source
+    # of truth for absolute URLs).
+    location = /robots.txt {
+        proxy_pass ${API_ORIGIN};
+        proxy_set_header Host $host;
+    }
+
+    location = /sitemap.xml {
+        proxy_pass ${API_ORIGIN};
+        proxy_set_header Host $host;
+    }
+
+    # Forward the API to the backend service. proxy_pass without a URI keeps
+    # the original path, so the backend's own /api/* routes keep working.
+    location /api/ {
+        proxy_pass ${API_ORIGIN};
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Immutable hashed build assets.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; font-src 'self'; media-src 'self' http: https:; connect-src 'self' ${API_ORIGIN}; object-src 'none'; frame-ancestors 'self'; base-uri 'self'" always;
+        try_files $uri =404;
+    }
+
+    # SPA history-mode routing: any unknown path serves the app shell.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

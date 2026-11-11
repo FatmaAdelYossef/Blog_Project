@@ -1,0 +1,70 @@
+# Local production-like stack (Alpine images). Not used for real deploys —
+# see DEPLOYMENT.md for PaaS instructions.
+name: blog-local
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-blog}
+      POSTGRES_USER: ${POSTGRES_USER:-blog}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - blog-pgdata-compose:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-blog} -d ${POSTGRES_DB:-blog}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build: ./BlogBack
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Connection1: Host=db;Port=5432;Database=${POSTGRES_DB:-blog};Username=${POSTGRES_USER:-blog};Password=${POSTGRES_PASSWORD}
+      Jwt__Key: ${JWT_KEY:?set JWT_KEY}
+      Jwt__Issuer: BlogApi
+      Jwt__Audience: BlogUser
+      Frontend__Origin: ${FRONTEND_ORIGIN:-http://localhost:8081}
+      ForwardedHeaders__Enabled: "true"
+      Seed__DefaultPassword: ${SEED_PASSWORD:-}
+    volumes:
+      # Persist the ASP.NET DataProtection key ring so redeploys don't
+      # invalidate outstanding password-reset tokens.
+      - blog-dpkeys:/home/app/.aspnet/DataProtection-Keys
+      # Keep uploaded images across container rebuilds (PaaS: use a volume or object storage).
+      - blog-uploads:/app/wwwroot/images
+    ports:
+      - "5219:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  web:
+    build:
+      context: ./BlogFront
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_SITE_URL: ${SITE_URL:-}
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_ORIGIN: http://api:8080
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${PORT}/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  blog-pgdata-compose:
+  blog-dpkeys:
+  blog-uploads:

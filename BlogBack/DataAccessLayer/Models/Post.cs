@@ -14,6 +14,10 @@ public class Post
     public string? Content { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Nullable so existing rows survive the migration; unowned posts are admin-only.
+    public string? AuthorId { get; set; }
+
+    public ApplicationUser? Author { get; set; }
     public Category? Category { get; set; }
     public ICollection<Media>? Medias { get; set; } = new List<Media>();
 }

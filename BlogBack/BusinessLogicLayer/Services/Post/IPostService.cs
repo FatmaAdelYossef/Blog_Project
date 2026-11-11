@@ -13,7 +13,8 @@ public interface IPostService
 {
     Task<PostResponseDto> CreatePostAsync(CreatePostDto dto);
     Task<PagedResult<PostResponseDto>> GetAllPostsAsync(GetPostsDto dto);
-    Task<PostResponseDto> GetPostByIdAsync(int id);
+    Task<IReadOnlyList<int>> GetPostIdsAsync();
+    Task<PostResponseDto?> GetPostByIdAsync(int id);
     Task<PostResponseDto?> UpdatePostAsync(int id, UpdatePostDto dto);
     Task<bool> DeletePostAsync(int id);
 }

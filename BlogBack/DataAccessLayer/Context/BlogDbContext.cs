@@ -24,11 +24,18 @@ public class BlogDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(modelBuilder);
 
+        // Birth dates are calendar dates; mapping them to `date` also avoids
+        // Npgsql rejecting unspecified DateTime kinds for `timestamptz`.
+        modelBuilder.Entity<ApplicationUser>()
+            .Property(user => user.BirthDate)
+            .HasColumnType("date");
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BlogDbContext).Assembly);
     }
 
     public DbSet<Post> Posts { get; set; }
     public DbSet<Media> Medias { get; set; }
     public DbSet<Category> Categories { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
 }

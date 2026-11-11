@@ -21,7 +21,7 @@ public class JwtService : IJwtService
         _jwtSettings = jwtSettings.Value;
     }
 
-    public string GenerateToken(ApplicationUser user)
+    public string GenerateToken(ApplicationUser user, IEnumerable<string> roles)
     {
         var claims = new List<Claim>
             {
@@ -29,6 +29,11 @@ public class JwtService : IJwtService
                 new Claim(ClaimTypes.Email, user.Email!),
                 new Claim(ClaimTypes.Name, user.UserName!)
             };
+
+        foreach (var role in roles.Distinct())
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

@@ -1,18 +1,16 @@
 
 import { Navigate, Outlet } from 'react-router-dom';
 import { ROUTES } from '../config/routes';
-import { jwtService } from '../services/jwtService';
+import { useAuth } from '../context/AuthContext';
 
 export const AuthGuard = ({ isPublicOnly }) => {
-    const token = localStorage.getItem('token');
+    const { isAuthenticated } = useAuth();
 
-    const isValid = token && !jwtService.isTokenExpired(token);
-
-    if (isPublicOnly && isValid) {
+    if (isPublicOnly && isAuthenticated) {
         return <Navigate to={ROUTES.HOME} />;
     }
 
-    if (!isPublicOnly && !isValid) {
+    if (!isPublicOnly && !isAuthenticated) {
         return <Navigate to={ROUTES.LOGIN} />;
     }
 

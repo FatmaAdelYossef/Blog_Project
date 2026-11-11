@@ -9,5 +9,5 @@ namespace BusinessLogicLayer.Services.JWT;
 
 public interface IJwtService
 {
-    string GenerateToken(ApplicationUser user);
+    string GenerateToken(ApplicationUser user, IEnumerable<string> roles);
 }

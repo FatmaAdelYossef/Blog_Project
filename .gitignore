@@ -25,7 +25,6 @@
 .npm
 .yarn
 .cache
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
@@ -59,3 +58,7 @@ Thumbs.db
 *.rar
 *.tar
 *.zip
+# Local env overrides (never commit secrets/config)
+.env
+**/.env
+!.env.example

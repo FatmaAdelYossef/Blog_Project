@@ -7,6 +7,7 @@ using DataAccessLayer.DTOs.Download;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles;
+using SharedLayer.Helpers;
 
 namespace BusinessLogicLayer.Services.Upload;
 
@@ -188,6 +189,27 @@ public class UploadService : IUploadService
             ContentType = contentType,
             FileName = safeFileName
         };
+    }
+
+    /// <summary>
+    /// Deletes an uploaded image referenced by a media URL. Only GUID file
+    /// names produced by <see cref="UploadImageAsync"/> are touched; external
+    /// URLs and site-relative paths are left alone.
+    /// </summary>
+    public bool TryDeleteUploadedFile(string? url)
+    {
+        if (url is null || !PublicHelperShared.IsGuidFileName(url))
+            return false;
+
+        var safeFileName = Path.GetFileName(url);
+        var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+        var filePath = Path.Combine(webRoot, "images", safeFileName);
+
+        if (!File.Exists(filePath))
+            return false;
+
+        File.Delete(filePath);
+        return true;
     }
 
 }

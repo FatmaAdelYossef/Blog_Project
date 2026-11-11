@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n';
 import { ROUTES } from '../../config/routes';
 import { categoryService } from '../../services/categoryService';
 import { postService } from '../../services/postService';
@@ -18,47 +19,48 @@ import { PageHeader } from '../../components/PageHeader';
 
 const unwrap = (payload) => payload?.data ?? payload;
 
-const ACTIONS = [
-  {
-    to: ROUTES.POSTS,
-    title: 'Posts',
-    description: 'Read the archive, search by title, and manage your writing.',
-    icon: FileText,
-    meta: 'Read & edit',
-  },
-  {
-    to: ROUTES.CATEGORIES,
-    title: 'Categories',
-    description: 'Shape the sections that organize the blog.',
-    icon: FolderOpen,
-    meta: 'Organize',
-  },
-  {
-    to: ROUTES.CHANGE_PASSWORD,
-    title: 'Account security',
-    description: 'Update the password that protects your account.',
-    icon: KeyRound,
-    meta: 'Protect',
-  },
-];
-
 const STATS = [
   {
     key: 'posts',
-    label: 'Posts',
-    description: 'Across every category',
+    labelKey: 'dash.posts',
+    descriptionKey: 'dash.postsDesc',
     icon: FileText,
   },
   {
     key: 'categories',
-    label: 'Categories',
-    description: 'Sections in the archive',
+    labelKey: 'dash.categories',
+    descriptionKey: 'dash.categoriesDesc',
     icon: FolderOpen,
+  },
+];
+
+const ACTIONS = [
+  {
+    to: ROUTES.POSTS,
+    titleKey: 'page.posts',
+    descriptionKey: 'posts.desc',
+    icon: FileText,
+    metaKey: 'dash.posts',
+  },
+  {
+    to: ROUTES.CATEGORIES,
+    titleKey: 'page.categories',
+    descriptionKey: 'dash.categoriesDesc',
+    icon: FolderOpen,
+    metaKey: 'dash.categories',
+  },
+  {
+    to: ROUTES.CHANGE_PASSWORD,
+    titleKey: 'cp.title',
+    descriptionKey: 'cp.desc',
+    icon: KeyRound,
+    metaKey: 'dash.access',
   },
 ];
 
 export default function Dashboard() {
   const { isAuthenticated, user } = useAuth();
+  const { t } = useLanguage();
   const [stats, setStats] = useState({ posts: null, categories: null, loading: true });
 
   useEffect(() => {
@@ -111,12 +113,12 @@ export default function Dashboard() {
         />
 
         <PageHeader
-          eyebrow="Overview"
-          title={isAuthenticated ? 'Your writing desk' : 'Welcome to My Blog'}
+          eyebrow={t('nav.overview')}
+          title={isAuthenticated ? t('dash.titleAuth') : t('dash.titleGuest')}
           description={
             isAuthenticated
-              ? `Signed in as ${user?.email ?? 'a member'}. Pick up where you left off or start something new.`
-              : 'Read the latest posts, browse the archive, or sign in to start writing.'
+              ? t('dash.descAuth', { email: user?.email ?? '' })
+              : t('dash.descGuest')
           }
           actions={
             isAuthenticated && user?.role ? (
@@ -126,8 +128,8 @@ export default function Dashboard() {
                 to={ROUTES.LOGIN}
                 className="inline-flex min-h-11 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-surface transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
-                Start writing
-                <ArrowRight aria-hidden="true" className="size-4" />
+                {t('dash.startWriting')}
+                <ArrowRight aria-hidden="true" className="size-4 rtl:-scale-x-100" />
               </Link>
             )
           }
@@ -136,32 +138,32 @@ export default function Dashboard() {
         <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line pt-5 text-xs text-ink-muted">
           <span className="inline-flex items-center gap-2">
             <PenLine aria-hidden="true" className="size-3.5 text-accent" />
-            Notes, stories, and ideas worth keeping.
+            {t('dash.note1')}
           </span>
           <span className="inline-flex items-center gap-2">
             <Sparkles aria-hidden="true" className="size-3.5 text-accent" />
-            A calm place to publish.
+            {t('dash.note2')}
           </span>
         </div>
       </Card>
 
       <section aria-labelledby="stats-heading">
         <h2 id="stats-heading" className="sr-only">
-          Workspace totals
+          {t('dash.statsHeading')}
         </h2>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {STATS.map(({ key, label, description, icon: Icon }) => (
+          {STATS.map(({ key, labelKey, descriptionKey, icon: Icon }) => (
             <Card key={key} className="flex flex-col gap-4">
               <div className="flex items-center justify-between gap-3">
                 <span className="inline-flex size-10 items-center justify-center rounded-md bg-accent-soft text-accent">
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
-                <span className="eyebrow text-ink-muted">Total</span>
+                <span className="eyebrow text-ink-muted">{t('dash.total')}</span>
               </div>
 
               <div>
-                <p className="text-sm text-ink-muted">{label}</p>
+                <p className="text-sm text-ink-muted">{t(labelKey)}</p>
                 <p
                   className="mt-1 font-serif text-4xl leading-none text-ink"
                   aria-busy={stats.loading || undefined}
@@ -171,11 +173,13 @@ export default function Dashboard() {
                   ) : (
                     <>
                       {stats[key] ?? '—'}
-                      {stats[key] === null ? <span className="sr-only"> unavailable</span> : null}
+                      {stats[key] === null ? (
+                        <span className="sr-only"> {t('dash.unavailable')}</span>
+                      ) : null}
                     </>
                   )}
                 </p>
-                <p className="mt-2 text-xs text-ink-muted">{description}</p>
+                <p className="mt-2 text-xs text-ink-muted">{t(descriptionKey)}</p>
               </div>
             </Card>
           ))}
@@ -185,27 +189,25 @@ export default function Dashboard() {
               <span className="inline-flex size-10 items-center justify-center rounded-md bg-accent-soft text-accent">
                 <ShieldCheck aria-hidden="true" className="size-5" />
               </span>
-              <span className="eyebrow text-ink-muted">Session</span>
+              <span className="eyebrow text-ink-muted">{t('dash.access')}</span>
             </div>
 
             <div>
-              <p className="text-sm text-ink-muted">Your access</p>
+              <p className="text-sm text-ink-muted">{t('dash.access')}</p>
               <div className="mt-2 flex items-center gap-2">
                 <Badge variant={isAuthenticated ? 'accent' : 'neutral'}>
-                  {isAuthenticated ? (user?.role ?? 'Member') : 'Guest'}
+                  {isAuthenticated ? (user?.role ?? t('dash.member')) : t('dash.guest')}
                 </Badge>
               </div>
               <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-                {isAuthenticated
-                  ? 'You can write and manage the posts you own.'
-                  : 'Sign in to write and manage posts.'}
+                {isAuthenticated ? t('dash.accessAuth') : t('dash.accessGuest')}
               </p>
               {!isAuthenticated ? (
                 <Link
                   to={ROUTES.LOGIN}
                   className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent underline-offset-4 hover:underline"
                 >
-                  Sign in
+                  {t('dash.signIn')}
                 </Link>
               ) : null}
             </div>
@@ -217,14 +219,14 @@ export default function Dashboard() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 id="actions-heading" className="font-serif text-2xl font-medium text-ink">
-              Start here
+              {t('dash.startHere')}
             </h2>
-            <p className="mt-1 text-sm text-ink-muted">Three places to pick up the thread.</p>
+            <p className="mt-1 text-sm text-ink-muted">{t('dash.startHereSub')}</p>
           </div>
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {ACTIONS.map(({ to, title, description, icon: Icon, meta }, index) => (
+          {ACTIONS.map(({ to, titleKey, descriptionKey, icon: Icon, metaKey }, index) => (
             <Card
               key={to}
               as={Link}
@@ -236,17 +238,19 @@ export default function Dashboard() {
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
                 <span className="font-mono text-2xs uppercase tracking-[0.18em] text-ink-muted">
-                  {String(index + 1).padStart(2, '0')} · {meta}
+                  {String(index + 1).padStart(2, '0')} · {t(metaKey)}
                 </span>
               </div>
 
-              <h3 className="font-serif text-lg font-medium text-ink">{title}</h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-muted">{description}</p>
+              <h3 className="font-serif text-lg font-medium text-ink">{t(titleKey)}</h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-muted">
+                {t(descriptionKey)}
+              </p>
               <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-accent">
-                Open
+                {t('dash.startHere')}
                 <ArrowRight
                   aria-hidden="true"
-                  className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none"
+                  className="size-4 transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100 motion-reduce:transform-none"
                 />
               </span>
             </Card>
@@ -262,11 +266,10 @@ export default function Dashboard() {
             </span>
             <div>
               <h2 id="note-heading" className="font-serif text-xl font-medium text-ink">
-                A small editorial note
+                {t('dash.noteTitle')}
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-muted">
-                Posts you create belong to your account. Admins can still see and manage everything,
-                including posts created before ownership was introduced.
+                {t('dash.noteBody')}
               </p>
             </div>
           </div>

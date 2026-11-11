@@ -39,8 +39,13 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const handleForcedLogout = () => setToken(null);
+    const handleTokenRefreshed = () => setToken(getToken());
     window.addEventListener('auth:logout', handleForcedLogout);
-    return () => window.removeEventListener('auth:logout', handleForcedLogout);
+    window.addEventListener('auth:token-refreshed', handleTokenRefreshed);
+    return () => {
+      window.removeEventListener('auth:logout', handleForcedLogout);
+      window.removeEventListener('auth:token-refreshed', handleTokenRefreshed);
+    };
   }, []);
 
   const value = useMemo(

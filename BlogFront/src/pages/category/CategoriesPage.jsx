@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { categoryService } from '../../services/categoryService';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n';
 import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, Input, Spinner } from '../../components/ui';
 import { PageHeader } from '../../components/PageHeader';
 
 export default function CategoriesPage() {
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,12 +27,12 @@ export default function CategoriesPage() {
       const list = Array.isArray(data) ? data : (data?.items ?? data?.data ?? []);
       setCategories(Array.isArray(list) ? list : []);
     } catch {
-      setError('Could not load categories. Please try again.');
+      setError(t('cat.loadError'));
       if (!silent) setCategories([]);
     } finally {
       if (!silent) setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -60,7 +62,7 @@ export default function CategoriesPage() {
       setEditingId(null);
       await fetchCategories(true);
     } catch (err) {
-      setError(err?.response?.data?.message || 'Could not save the category. Please try again.');
+      setError(err?.response?.data?.message || t('cat.saveError'));
     } finally {
       setSaving(false);
     }
@@ -88,7 +90,7 @@ export default function CategoriesPage() {
       await fetchCategories(true);
     } catch (err) {
       setError(
-        err?.response?.data?.message || 'Could not delete the category. It may still have posts.',
+        err?.response?.data?.message || t('cat.deleteError'),
       );
     } finally {
       setDeleting(false);
@@ -99,13 +101,15 @@ export default function CategoriesPage() {
   return (
     <div className="max-w-3xl space-y-8">
       <PageHeader
-        eyebrow="Library"
-        title="Categories"
-        description="Categories group posts into the sections readers browse. Rename one at any time; categories that still contain posts cannot be deleted."
+        eyebrow={t('cat.eyebrow')}
+        title={t('cat.title')}
+        description={t('cat.desc')}
         actions={
           !loading ? (
             <Badge variant="neutral">
-              {categories.length} {categories.length === 1 ? 'category' : 'categories'}
+              {t(categories.length === 1 ? 'cat.countOne' : 'cat.count', {
+                count: categories.length,
+              })}
             </Badge>
           ) : null
         }
@@ -121,18 +125,20 @@ export default function CategoriesPage() {
         <Card>
           <div className="mb-4 flex items-baseline justify-between gap-3">
             <h2 className="font-serif text-lg font-medium text-ink">
-              {editingId ? 'Edit category' : 'New category'}
+              {editingId ? t('cat.editCategory') : t('cat.newCategory')}
             </h2>
-            <span className="eyebrow text-ink-muted">{editingId ? 'Editing' : 'Add'}</span>
+            <span className="eyebrow text-ink-muted">
+              {editingId ? t('cat.editing') : t('cat.add')}
+            </span>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <Input
-              label="Category name"
+              label={t('cat.nameLabel')}
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="New category name..."
+              placeholder={t('cat.namePlaceholder')}
               className="sm:flex-1"
             />
 
@@ -143,12 +149,12 @@ export default function CategoriesPage() {
                 disabled={!name.trim()}
                 className="sm:shrink-0"
               >
-                {editingId ? 'Update category' : 'Add category'}
+                {editingId ? t('cat.update') : t('cat.addSubmit')}
               </Button>
 
               {editingId ? (
                 <Button variant="ghost" onClick={handleCancelEdit} disabled={saving}>
-                  Cancel
+                  {t('cat.cancel')}
                 </Button>
               ) : null}
             </div>
@@ -158,13 +164,13 @@ export default function CategoriesPage() {
 
       {loading ? (
         <div aria-busy="true" className="flex justify-center py-10">
-          <Spinner label="Loading categories" />
+          <Spinner label={t('cat.loading')} />
         </div>
       ) : categories.length === 0 ? (
         error ? null : (
           <EmptyState
-            title="No categories yet"
-            description="Categories group posts so readers can browse by topic."
+            title={t('cat.emptyTitle')}
+            description={t('cat.emptyDesc')}
           />
         )
       ) : (
@@ -194,18 +200,18 @@ export default function CategoriesPage() {
                       variant="secondary"
                       icon={<Pencil />}
                       onClick={() => handleEdit(category)}
-                      aria-label={`Edit ${category.name}`}
+                      aria-label={`${t('cat.edit')} ${category.name}`}
                     >
-                      Edit
+                      {t('cat.edit')}
                     </Button>
                     <Button
                       size="sm"
                       variant="danger"
                       icon={<Trash2 />}
                       onClick={() => setPendingDelete(category)}
-                      aria-label={`Delete ${category.name}`}
+                      aria-label={`${t('cat.delete')} ${category.name}`}
                     >
-                      Delete
+                      {t('cat.delete')}
                     </Button>
                   </div>
                 ) : null}
@@ -217,13 +223,13 @@ export default function CategoriesPage() {
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}
-        title="Delete this category?"
+        title={t('cat.deleteTitle')}
         description={
           pendingDelete
-            ? `"${pendingDelete.name}" will be permanently deleted. Categories that still have posts cannot be deleted.`
+            ? t('cat.deleteDesc', { name: pendingDelete.name })
             : undefined
         }
-        confirmLabel="Delete"
+        confirmLabel={t('cat.deleteConfirm')}
         loading={deleting}
         onCancel={() => setPendingDelete(null)}
         onConfirm={handleConfirmDelete}

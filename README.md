@@ -9,8 +9,8 @@ their password by email.
 | Layer | Stack |
 | --- | --- |
 | Frontend | React 19, Vite 8, Tailwind CSS 4, React Router 7, Axios, DOMPurify, react-quill-new, Oxlint |
-| Backend | .NET 8, ASP.NET Core Web API, Entity Framework Core 8, PostgreSQL, ASP.NET Core Identity, JWT bearer auth |
-| Backend libraries | AutoMapper, Scrutor, Swashbuckle (Swagger) |
+| Backend | .NET 8, ASP.NET Core Web API, Entity Framework Core 8, PostgreSQL, ASP.NET Core Identity, JWT bearer auth + rotating refresh tokens |
+| Backend libraries | AutoMapper, Scrutor, Swashbuckle (Swagger), MailKit |
 
 ## Repository layout
 
@@ -24,6 +24,8 @@ BlogBack/
   BusinessLogicLayer/      services and AutoMapper profiles
   DataAccessLayer/         EF Core DbContext, migrations, models, seeders
   SharedLayer/             shared configuration classes and helpers
+  BlogBack.Tests/          xUnit test suite (services, auth/token flows, upload validation)
+  .config/                 local dotnet tools manifest (dotnet-ef for migrations)
   BlogBack.sln             solution file
   README-SECRETS.md        backend configuration and secrets guide
 ```
@@ -116,5 +118,10 @@ workflow does not deploy or require repository secrets.
 
 ## Testing
 
-There is no automated test suite yet. The checks available today are the frontend lint and
-production build and the backend Release build, all of which run in CI.
+- **Frontend** — Vitest + Testing Library suite co-located with components/pages/libs
+  (`npm test` in `BlogFront/`).
+- **Backend** — xUnit suite in `BlogBack/BlogBack.Tests/` covering auth/token flows,
+  post ownership rules, category rules, upload validation, JWT issuance, and pagination
+  (`dotnet test BlogBack/BlogBack.sln`).
+
+Both run in CI on every push and pull request.

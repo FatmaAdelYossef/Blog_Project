@@ -18,7 +18,7 @@ services:
       retries: 12
 
   api:
-    build: ../BlogBack
+    build: ./BlogBack
     depends_on:
       db:
         condition: service_healthy
@@ -30,6 +30,12 @@ services:
       Frontend__Origin: ${FRONTEND_ORIGIN:-http://localhost:8081}
       ForwardedHeaders__Enabled: "true"
       Seed__DefaultPassword: ${SEED_PASSWORD:-}
+    volumes:
+      # Persist the ASP.NET DataProtection key ring so redeploys don't
+      # invalidate outstanding password-reset tokens.
+      - blog-dpkeys:/home/app/.aspnet/DataProtection-Keys
+      # Keep uploaded images across container rebuilds (PaaS: use a volume or object storage).
+      - blog-uploads:/app/wwwroot/images
     ports:
       - "5219:8080"
     healthcheck:
@@ -41,7 +47,7 @@ services:
 
   web:
     build:
-      context: ../BlogFront
+      context: ./BlogFront
       args:
         VITE_API_BASE_URL: /api
         VITE_SITE_URL: ${SITE_URL:-}
@@ -60,3 +66,5 @@ services:
 
 volumes:
   blog-pgdata-compose:
+  blog-dpkeys:
+  blog-uploads:

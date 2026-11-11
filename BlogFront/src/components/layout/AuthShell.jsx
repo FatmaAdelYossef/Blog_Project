@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { useLanguage } from '../../i18n';
 import { ROUTES } from '../../config/routes';
 import { Brand } from './Brand';
+import { LanguageToggle } from './LanguageToggle';
 import { ThemeToggle } from './ThemeToggle';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -19,9 +21,11 @@ const CURRENT_YEAR = new Date().getFullYear();
  * @param {import('react').ReactNode} [props.footer]
  */
 export function AuthShell({ title, description, children, footer }) {
+  const { t } = useLanguage();
+
   useEffect(() => {
-    document.title = `${title} · My Blog`;
-  }, [title]);
+    document.title = `${title} · ${t('app.name')}`;
+  }, [title, t]);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -44,27 +48,25 @@ export function AuthShell({ title, description, children, footer }) {
                 <path d="M17.5 15H9" />
               </svg>
             </span>
-            <span className="font-serif text-xl font-semibold tracking-tight">My Blog</span>
+            <span className="font-serif text-xl font-semibold tracking-tight">
+              {t('app.name')}
+            </span>
           </div>
 
           <div className="max-w-sm">
-            <p className="eyebrow">Editorial workspace</p>
-            <p className="mt-5 font-serif text-4xl leading-tight">
-              Notes, stories, and ideas worth keeping.
-            </p>
+            <p className="eyebrow">{t('shell.tagline')}</p>
+            <p className="mt-5 font-serif text-4xl leading-tight">{t('shell.hero')}</p>
             <div className="mt-8 h-px w-16 bg-accent" />
-            <p className="mt-6 text-sm leading-relaxed text-paper/70">
-              A calm place to write, publish, and organize your thinking.
-            </p>
+            <p className="mt-6 text-sm leading-relaxed text-paper/70">{t('shell.heroSub')}</p>
           </div>
 
-          <p className="text-xs text-paper/50">© {CURRENT_YEAR} My Blog</p>
+          <p className="text-xs text-paper/50">© {CURRENT_YEAR} {t('app.name')}</p>
         </aside>
 
         <main className="flex flex-col justify-center px-5 py-10 sm:px-10 lg:px-14">
           <div className="mx-auto w-full max-w-md">
             <div className="mb-10 lg:hidden">
-              <Brand />
+              <Brand tagline={t('app.taglinePublic')} />
             </div>
 
             <div className="flex items-center justify-between gap-4">
@@ -72,11 +74,14 @@ export function AuthShell({ title, description, children, footer }) {
                 to={ROUTES.HOME}
                 className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
-                <ArrowLeft aria-hidden="true" className="size-4" />
-                Back to blog
+                <ArrowLeft aria-hidden="true" className="size-4 rtl:-scale-x-100" />
+                {t('shell.backToBlog')}
               </Link>
 
-              <ThemeToggle />
+              <div className="flex items-center gap-2">
+                <LanguageToggle />
+                <ThemeToggle />
+              </div>
             </div>
 
             <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">

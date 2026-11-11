@@ -1,18 +1,20 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './i18n';
 import { ScrollToTop } from './components/layout/ScrollToTop';
 import { AuthGuard } from './components/AuthGuard';
 import { Spinner } from './components/ui';
 import { ROUTES } from './config/routes';
 import Login from './pages/login/Login';
-import Dashboard from './pages/dashboard/Dashboard';
+import HomePage from './pages/home/HomePage';
 import NotFound from './pages/NotFound';
 import ChangePassword from './pages/changePassword/ChangePassword';
 import ForgotPassword from './pages/forgetPassword/ForgotPassword';
 import ResetPassword from './pages/resetPassword/ResetPassword';
 import DashboardLayout from './pages/dashboard/DashboardLayout';
+import PublicLayout from './components/layout/PublicLayout';
 import CategoriesPage from './pages/category/CategoriesPage';
 
 // The post routes pull in the Quill editor; load them on demand so the shell
@@ -32,6 +34,14 @@ function LazyPage({ children }) {
   return <Suspense fallback={<PageFallback />}>{children}</Suspense>;
 }
 
+// Guests read the blog through the public top-nav shell; signed-in members
+// get the workspace sidebar. Both layouts render <Outlet/>, so the route
+// tree below stays identical either way.
+function SiteShell() {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <DashboardLayout /> : <PublicLayout />;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -39,6 +49,7 @@ function App() {
           every route shares one auth state and future router-aware auth code
           can be added without moving the provider. */}
       <ThemeProvider>
+        <LanguageProvider>
         <AuthProvider>
           <ScrollToTop />
           <Routes>
@@ -49,10 +60,11 @@ function App() {
               <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
             </Route>
 
-            {/* 2. All main routes are public inside DashboardLayout. Change
-                password is nested under AuthGuard because it needs a session. */}
-            <Route element={<DashboardLayout />}>
-              <Route path={ROUTES.HOME} element={<Dashboard />} />
+            {/* 2. Main routes sit inside SiteShell, which picks the public or
+                workspace layout from auth state. Change password is nested
+                under AuthGuard because it needs a session. */}
+            <Route element={<SiteShell />}>
+              <Route path={ROUTES.HOME} element={<HomePage />} />
               <Route element={<AuthGuard />}>
                 <Route path={ROUTES.CHANGE_PASSWORD} element={<ChangePassword />} />
               </Route>
@@ -79,6 +91,7 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

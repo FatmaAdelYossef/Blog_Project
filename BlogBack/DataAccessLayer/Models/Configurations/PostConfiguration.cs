@@ -27,6 +27,8 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
                .HasForeignKey(p => p.AuthorId)
                .OnDelete(DeleteBehavior.SetNull);
 
+        // Covers the default feed ordering (CreatedAt desc) and category filters.
+        builder.HasIndex(p => new { p.CategoryId, p.CreatedAt });
         builder.HasIndex(p => p.AuthorId);
     }
 }

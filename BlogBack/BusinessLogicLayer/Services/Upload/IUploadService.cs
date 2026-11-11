@@ -12,4 +12,5 @@ public interface IUploadService
 {
     Task<string> UploadImageAsync(IFormFile file);
     FileDownloadResponse DownloadFile(string fileName);
+    bool TryDeleteUploadedFile(string? url);
 }

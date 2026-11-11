@@ -1,11 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
+import { useLanguage } from '../../i18n';
 import { ROUTES } from '../../config/routes';
+import { applySeo } from '../../lib/seo';
 import { AuthShell } from '../../components/layout/AuthShell';
 import { Alert, Button, Input } from '../../components/ui';
 
 export default function ForgotPassword() {
+  const { t } = useLanguage();
+
+  useEffect(() => {
+    // Private route: keep crawlers out of the head.
+    applySeo({ title: `${t('forgot.title')} · ${t('app.name')}`, noindex: true });
+  }, [t]);
+
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,7 +30,7 @@ export default function ForgotPassword() {
       await authService.forgotPassword({ Email: email });
       setIsSubmitted(true);
     } catch {
-      setError('We could not send the reset email. Check your connection and try again.');
+      setError(t('forgot.sendError'));
     } finally {
       setLoading(false);
     }
@@ -29,35 +38,27 @@ export default function ForgotPassword() {
 
   return (
     <AuthShell
-      title={isSubmitted ? 'Check your inbox' : 'Reset your password'}
-      description={
-        isSubmitted
-          ? 'If the address matches an account, a recovery link is on its way.'
-          : 'Enter the email address you use to sign in and we will send recovery instructions.'
-      }
+      title={isSubmitted ? t('forgot.titleSent') : t('forgot.title')}
+      description={isSubmitted ? t('forgot.descSent') : t('forgot.desc')}
       footer={
         <p>
-          Remembered it?{' '}
+          {t('forgot.remembered')}{' '}
           <Link
             to={ROUTES.LOGIN}
             className="font-medium text-accent underline-offset-4 hover:underline"
           >
-            Back to sign in
+            {t('auth.backToSignIn')}
           </Link>
         </p>
       }
     >
       {isSubmitted ? (
         <div className="space-y-5">
-          <Alert variant="success" title="Recovery email sent">
-            If an account exists for <span className="font-medium text-ink">{email}</span>, the
-            reset link is on its way.
+          <Alert variant="success" title={t('forgot.sentTitle')}>
+            {t('forgot.sentBody', { email })}
           </Alert>
 
-          <p className="text-sm leading-relaxed text-ink-muted">
-            The link is time-limited for your protection. If it does not arrive, check your spam
-            folder or request a new one.
-          </p>
+          <p className="text-sm leading-relaxed text-ink-muted">{t('forgot.sentHint')}</p>
 
           <Button
             variant="secondary"
@@ -65,13 +66,13 @@ export default function ForgotPassword() {
             className="w-full"
             onClick={() => navigate(ROUTES.LOGIN)}
           >
-            Back to sign in
+            {t('auth.backToSignIn')}
           </Button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           <Input
-            label="Email address"
+            label={t('auth.emailLabel')}
             type="email"
             name="email"
             autoComplete="email"
@@ -90,9 +91,9 @@ export default function ForgotPassword() {
             size="lg"
             className="w-full"
             loading={loading}
-            loadingLabel="Sending instructions"
+            loadingLabel={t('forgot.sendingInstructions')}
           >
-            Send reset instructions
+            {t('forgot.sendInstructions')}
           </Button>
         </form>
       )}

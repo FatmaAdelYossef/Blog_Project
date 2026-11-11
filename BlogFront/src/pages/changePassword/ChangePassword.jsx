@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { authService } from '../../services/authService';
+import { useLanguage } from '../../i18n';
 import { ROUTES } from '../../config/routes';
 import { Alert, Button, Card, PasswordInput } from '../../components/ui';
 import { PageHeader } from '../../components/PageHeader';
@@ -16,6 +17,7 @@ export default function ChangePassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!success) return undefined;
@@ -34,12 +36,12 @@ export default function ChangePassword() {
     setSuccess('');
 
     if (formData.NewPassword !== formData.confirmPassword) {
-      setError('New passwords do not match.');
+      setError(t('reset.mismatch'));
       return;
     }
 
     if (formData.NewPassword.length < 2) {
-      setError('Password must be at least 2 characters long.');
+      setError(t('reset.tooShort'));
       return;
     }
 
@@ -52,9 +54,9 @@ export default function ChangePassword() {
         CurrentPassword: formData.CurrentPassword,
         NewPassword: formData.NewPassword,
       });
-      setSuccess('Password changed successfully!');
+      setSuccess(t('cp.success'));
     } catch {
-      setError('Failed to change password. Please check your current password.');
+      setError(t('cp.failed'));
     } finally {
       setLoading(false);
     }
@@ -63,15 +65,15 @@ export default function ChangePassword() {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-8">
       <PageHeader
-        eyebrow="Account"
-        title="Change password"
-        description="Confirm your current password, then choose a new one."
+        eyebrow={t('cp.eyebrow')}
+        title={t('cp.title')}
+        description={t('cp.desc')}
       />
 
       <Card padding="lg">
         <form onSubmit={handleSubmit} className="space-y-5">
           <PasswordInput
-            label="Current password"
+            label={t('cp.current')}
             name="current-password"
             autoComplete="current-password"
             value={formData.CurrentPassword}
@@ -80,7 +82,7 @@ export default function ChangePassword() {
           />
 
           <PasswordInput
-            label="New password"
+            label={t('cp.new')}
             name="new-password"
             autoComplete="new-password"
             value={formData.NewPassword}
@@ -89,7 +91,7 @@ export default function ChangePassword() {
           />
 
           <PasswordInput
-            label="Confirm new password"
+            label={t('cp.confirm')}
             name="confirm-password"
             autoComplete="new-password"
             value={formData.confirmPassword}
@@ -105,17 +107,17 @@ export default function ChangePassword() {
               to={ROUTES.HOME}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
             >
-              <ArrowLeft aria-hidden="true" className="size-4" />
-              Back to overview
+              <ArrowLeft aria-hidden="true" className="size-4 rtl:-scale-x-100" />
+              {t('cp.back')}
             </Link>
 
             <Button
               type="submit"
               size="lg"
               loading={loading}
-              loadingLabel="Updating password"
+              loadingLabel={t('cp.updating')}
             >
-              Update password
+              {t('cp.submit')}
             </Button>
           </div>
         </form>

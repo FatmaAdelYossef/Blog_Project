@@ -34,8 +34,8 @@ public class CategoryController : ControllerBase
     public async Task<ActionResult<Category>> GetById(int id)
     {
         var category = await _categoryService.GetByIdAsync(id);
-        if (category == null) return NotFound();
-        return Ok(category);
+        if (category == null) return NotFound(ApiResponse.NotFoundResponse("Category not found."));
+        return Ok(ApiResponse<Category>.SuccessResult(category));
     }
 
     // POST: api/category
@@ -43,8 +43,8 @@ public class CategoryController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Category>> Create(Category category)
     {
-        var createdCategory = await _categoryService.CreateAsync(category);
-        return Ok("Category created successfully");
+        var created = await _categoryService.CreateAsync(category);
+        return Ok(ApiResponse<Category>.SuccessResult(created, "Category created successfully."));
     }
 
     // PUT: api/category/5
@@ -52,12 +52,12 @@ public class CategoryController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Category category)
     {
-        if (id != category.Id) return BadRequest("ID mismatch");
+        if (id != category.Id) return BadRequest(ApiResponse.BadRequestResponse("ID mismatch"));
 
         var result = await _categoryService.UpdateAsync(category);
         if (!result) return NotFound();
 
-        return NoContent();
+        return Ok(ApiResponse.SuccessResponse("Category updated successfully."));
     }
 
     // DELETE: api/category/5

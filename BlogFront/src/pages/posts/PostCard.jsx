@@ -1,7 +1,8 @@
 import { CalendarDays, Clock3, Trash2 } from 'lucide-react';
 import { Badge, Button, Card } from '../../components/ui';
+import { useLanguage } from '../../i18n';
 import { htmlToText } from '../../lib/sanitize';
-import { formatReadingTime, getReadingTime } from '../../lib/readingTime';
+import { getReadingTime } from '../../lib/readingTime';
 
 const EXCERPT_LENGTH = 120;
 
@@ -21,9 +22,13 @@ const formatDate = (value) => {
 };
 
 export function PostCard({ post, canDelete, onOpen, onDelete }) {
+  const { t } = useLanguage();
   const excerpt = getExcerpt(post.content);
   const publishedAt = formatDate(post.createdAt);
-  const readingTime = formatReadingTime(getReadingTime(post.content));
+  const readingMinutes = getReadingTime(post.content);
+  const readingTime = readingMinutes
+    ? t('post.minRead', { minutes: readingMinutes })
+    : '';
 
   return (
     <Card
@@ -63,7 +68,7 @@ export function PostCard({ post, canDelete, onOpen, onDelete }) {
 
       <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
         <Button size="sm" onClick={onOpen}>
-          Read post
+          {t('posts.readPost')}
         </Button>
 
         {canDelete ? (
@@ -72,9 +77,9 @@ export function PostCard({ post, canDelete, onOpen, onDelete }) {
             variant="danger"
             icon={<Trash2 />}
             onClick={onDelete}
-            aria-label={`Delete ${post.title}`}
+            aria-label={`${t('posts.deleteConfirm')} ${post.title}`}
           >
-            Delete
+            {t('posts.deleteConfirm')}
           </Button>
         ) : null}
       </div>

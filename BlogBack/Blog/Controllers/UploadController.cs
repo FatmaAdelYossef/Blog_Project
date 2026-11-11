@@ -3,6 +3,7 @@ using DataAccessLayer.DTOs.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Blog.Controllers;
 
@@ -19,6 +20,7 @@ public class UploadController : ControllerBase
         _logger = logger;
     }
 
+    [EnableRateLimiting("upload")]
     [HttpPost("image")]
     public async Task<IActionResult> UploadImage(IFormFile file)
     {

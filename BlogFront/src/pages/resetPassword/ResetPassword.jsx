@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../../services/authService';
+import { useLanguage } from '../../i18n';
 import { ROUTES } from '../../config/routes';
+import { applySeo } from '../../lib/seo';
 import { AuthShell } from '../../components/layout/AuthShell';
 import { Alert, Button, PasswordInput } from '../../components/ui';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  useEffect(() => {
+    // Private route: keep crawlers out of the head.
+    applySeo({ title: `${t('reset.submit')} · ${t('app.name')}`, noindex: true });
+  }, [t]);
 
   const emailFromUrl = searchParams.get('email') || '';
   const tokenFromUrl = searchParams.get('token') || '';
@@ -31,12 +39,12 @@ export default function ResetPassword() {
     setError('');
 
     if (newPassword !== confirmPassword) {
-      setError('New passwords do not match.');
+      setError(t('reset.mismatch'));
       return;
     }
 
     if (newPassword.length < 2) {
-      setError('Password must be at least 2 characters long.');
+      setError(t('reset.tooShort'));
       return;
     }
 
@@ -50,7 +58,7 @@ export default function ResetPassword() {
       });
       setSuccess(true);
     } catch {
-      setError('Failed to reset password. The link may have expired or is invalid.');
+      setError(t('reset.failed'));
     } finally {
       setLoading(false);
     }
@@ -58,38 +66,34 @@ export default function ResetPassword() {
 
   return (
     <AuthShell
-      title={success ? 'Password updated' : 'Choose a new password'}
-      description={
-        success
-          ? 'You can sign in with the new password in a moment.'
-          : 'Pick a password you have not used elsewhere.'
-      }
+      title={success ? t('reset.titleSuccess') : t('reset.title')}
+      description={success ? t('reset.descSuccess') : t('reset.desc')}
       footer={
         <p>
-          Need a fresh link?{' '}
+          {t('reset.needLink')}{' '}
           <Link
             to={ROUTES.FORGOT_PASSWORD}
             className="font-medium text-accent underline-offset-4 hover:underline"
           >
-            Request another
+            {t('reset.requestAnother')}
           </Link>
         </p>
       }
     >
       {success ? (
         <div className="space-y-5">
-          <Alert variant="success" title="All set">
-            Your password has been changed. Redirecting you to sign in…
+          <Alert variant="success" title={t('reset.allSet')}>
+            {t('reset.successBody')}
           </Alert>
 
           <Button size="lg" className="w-full" onClick={() => navigate(ROUTES.LOGIN)}>
-            Go to sign in
+            {t('reset.goToSignIn')}
           </Button>
         </div>
       ) : missingParams ? (
         <div className="space-y-5">
-          <Alert variant="danger" title="Invalid reset link">
-            This link is missing its email or token. Request a new email and open the newest link.
+          <Alert variant="danger" title={t('reset.invalidLink')}>
+            {t('reset.invalidLinkBody')}
           </Alert>
 
           <Button
@@ -97,13 +101,13 @@ export default function ResetPassword() {
             className="w-full"
             onClick={() => navigate(ROUTES.FORGOT_PASSWORD)}
           >
-            Request a new link
+            {t('reset.requestNewLink')}
           </Button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           <PasswordInput
-            label="New password"
+            label={t('reset.newPassword')}
             name="new-password"
             autoComplete="new-password"
             value={newPassword}
@@ -112,7 +116,7 @@ export default function ResetPassword() {
           />
 
           <PasswordInput
-            label="Confirm new password"
+            label={t('reset.confirmPassword')}
             name="confirm-password"
             autoComplete="new-password"
             value={confirmPassword}
@@ -127,9 +131,9 @@ export default function ResetPassword() {
             size="lg"
             className="w-full"
             loading={loading}
-            loadingLabel="Resetting password"
+            loadingLabel={t('reset.resetting')}
           >
-            Reset password
+            {t('reset.submit')}
           </Button>
         </form>
       )}

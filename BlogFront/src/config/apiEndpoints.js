@@ -5,6 +5,8 @@ const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://localhost:7034/a
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: `${BASE_URL}/auth/login`,
+    REFRESH: `${BASE_URL}/auth/refresh`,
+    LOGOUT: `${BASE_URL}/auth/logout`,
     CHANGE_PASSWORD: `${BASE_URL}/auth/change-password`,
     FORGOT_PASSWORD: `${BASE_URL}/auth/forgot-password`,
     RESET_PASSWORD: `${BASE_URL}/auth/reset-password`,

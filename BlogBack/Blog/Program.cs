@@ -9,6 +9,7 @@ using DataAccessLayer.Models;
 using DataAccessLayer.Seeders;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -21,6 +22,39 @@ using SharedLayer.ConfigClasses;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Fail fast on missing required configuration instead of booting a broken app.
+// Secrets come from environment variables or user-secrets — never appsettings.
+var connectionString = builder.Configuration.GetConnectionString("Connection1");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "ConnectionStrings:Connection1 is not configured. Set it via environment variables or user-secrets.");
+}
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key is missing or too short (need at least 32 characters for HS256). " +
+        "Set it via environment variables or user-secrets.");
+}
+
+foreach (var setting in new[] { "Jwt:Issuer", "Jwt:Audience" })
+{
+    if (string.IsNullOrWhiteSpace(builder.Configuration[setting]))
+    {
+        throw new InvalidOperationException($"{setting} is not configured.");
+    }
+}
+
+// Optional persistent DataProtection key ring (needed if more than one instance
+// must decrypt Identity tokens, e.g. reset-password links across replicas).
+var dataProtectionKeyPath = builder.Configuration["DataProtection:KeyPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeyPath))
+{
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeyPath));
+}
 
 builder.Services.AddDbContext<BlogDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Connection1")));
@@ -91,6 +125,20 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    // Authenticated uploads get their own per-user budget so a single account
+    // cannot fill the disk with 5 MB images.
+    options.AddPolicy("upload", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? context.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));

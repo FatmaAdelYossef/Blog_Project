@@ -17,11 +17,11 @@ public class CategoryService : ICategoryService
         _context = context;
     }
 
-    public async Task<bool> CreateAsync(DataAccessLayer.Models.Category category)
+    public async Task<DataAccessLayer.Models.Category> CreateAsync(DataAccessLayer.Models.Category category)
     {
         await _context.Categories.AddAsync(category);
         await _context.SaveChangesAsync();
-        return true;
+        return category;
     }
 
     public async Task<bool> DeleteAsync(int id)

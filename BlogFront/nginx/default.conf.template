@@ -20,6 +20,18 @@ server {
         return 200 "ok\n";
     }
 
+    # Crawl files are served by the API (Frontend:Origin is their single source
+    # of truth for absolute URLs).
+    location = /robots.txt {
+        proxy_pass ${API_ORIGIN};
+        proxy_set_header Host $host;
+    }
+
+    location = /sitemap.xml {
+        proxy_pass ${API_ORIGIN};
+        proxy_set_header Host $host;
+    }
+
     # Forward the API to the backend service. proxy_pass without a URI keeps
     # the original path, so the backend's own /api/* routes keep working.
     location /api/ {

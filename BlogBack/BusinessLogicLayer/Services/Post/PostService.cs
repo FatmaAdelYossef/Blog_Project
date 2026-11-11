@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessLogicLayer.Services.Authorization;
+using BusinessLogicLayer.Services.Upload;
 using DataAccessLayer.Context;
 using DataAccessLayer.DTOs.Medias;
 using DataAccessLayer.DTOs.Pagenation;
@@ -18,11 +19,13 @@ public class PostService : IPostService
 {
     private readonly BlogDbContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IUploadService _uploadService;
 
-    public PostService(BlogDbContext context, IHttpContextAccessor httpContextAccessor)
+    public PostService(BlogDbContext context, IHttpContextAccessor httpContextAccessor, IUploadService uploadService)
     {
         _context = context;
         _httpContextAccessor = httpContextAccessor;
+        _uploadService = uploadService;
     }
 
     public async Task<PostResponseDto> CreatePostAsync(CreatePostDto dto)
@@ -30,6 +33,9 @@ public class PostService : IPostService
         var authorId = PostAccess.GetUserId(_httpContextAccessor.HttpContext?.User);
         if (string.IsNullOrEmpty(authorId))
             throw new UnauthorizedAccessException("Authentication is required.");
+
+        if (!await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId))
+            throw new InvalidOperationException("The selected category does not exist.");
 
         var post = new DataAccessLayer.Models.Post
         {
@@ -62,7 +68,11 @@ public class PostService : IPostService
         if (dto.CategoryId.HasValue) query = query.Where(e => e.CategoryId == dto.CategoryId);
 
         var title = dto.Title?.Trim();
-        if (!string.IsNullOrWhiteSpace(title)) query = query.Where(e => e.Title.Contains(title));
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            var term = title.ToLower();
+            query = query.Where(e => e.Title.ToLower().Contains(term));
+        }
 
         var totalCount = await query.CountAsync();
 
@@ -88,6 +98,14 @@ public class PostService : IPostService
             TotalCount = totalCount,
             Items = postDtos,
         };
+    }
+
+    public async Task<IReadOnlyList<int>> GetPostIdsAsync()
+    {
+        return await _context.Posts
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => p.Id)
+            .ToListAsync();
     }
 
     public async Task<PostResponseDto?> GetPostByIdAsync(int id)
@@ -118,6 +136,13 @@ public class PostService : IPostService
 
         PostAccess.EnsureCanModify(_httpContextAccessor.HttpContext?.User, post.AuthorId);
 
+        if (dto.CategoryId.HasValue
+            && dto.CategoryId.Value != post.CategoryId
+            && !await _context.Categories.AnyAsync(c => c.Id == dto.CategoryId.Value))
+        {
+            throw new InvalidOperationException("The selected category does not exist.");
+        }
+
         post.Title = dto.Title;
         post.Content = dto.Content;
         post.CategoryId = dto.CategoryId.HasValue ? dto.CategoryId.Value : post.CategoryId;
@@ -134,14 +159,27 @@ public class PostService : IPostService
 
     public async Task<bool> DeletePostAsync(int id)
     {
-        var post = await _context.Posts.FindAsync(id);
+        var post = await _context.Posts
+            .Include(p => p.Medias)
+            .FirstOrDefaultAsync(p => p.Id == id);
         if (post == null)
             return false;
 
         PostAccess.EnsureCanModify(_httpContextAccessor.HttpContext?.User, post.AuthorId);
 
+        var uploadedFileUrls = post.Medias?
+            .Select(m => m.Url)
+            .ToList() ?? new List<string?>();
+
         _context.Posts.Remove(post);
         await _context.SaveChangesAsync();
+
+        // Best-effort cleanup of files uploaded through /api/Upload; external
+        // media URLs are skipped inside TryDeleteUploadedFile.
+        foreach (var url in uploadedFileUrls)
+        {
+            _uploadService.TryDeleteUploadedFile(url);
+        }
 
         return true;
     }

@@ -1,11 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n';
 import { ROUTES } from '../../config/routes';
+import { applySeo } from '../../lib/seo';
 import { AuthShell } from '../../components/layout/AuthShell';
 import { Alert, Button, Input, PasswordInput } from '../../components/ui';
 
 export default function Login() {
+  const { t } = useLanguage();
+
+  useEffect(() => {
+    // Private route: keep crawlers out of the head.
+    applySeo({ title: `${t('auth.signInPage')} · ${t('app.name')}`, noindex: true });
+  }, [t]);
+
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,7 +34,7 @@ export default function Login() {
       await login(formData);
       navigate(ROUTES.HOME);
     } catch {
-      setError('Invalid email or password.');
+      setError(t('auth.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -33,23 +42,23 @@ export default function Login() {
 
   return (
     <AuthShell
-      title="Welcome back"
-      description="Sign in to write, edit, and organize your posts."
+      title={t('auth.loginTitle')}
+      description={t('auth.loginDesc')}
       footer={
         <p>
-          Forgot your password?{' '}
+          {t('auth.forgotPassword')}{' '}
           <Link
             to={ROUTES.FORGOT_PASSWORD}
             className="font-medium text-accent underline-offset-4 hover:underline"
           >
-            Reset it
+            {t('auth.resetIt')}
           </Link>
         </p>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         <Input
-          label="Email address"
+          label={t('auth.emailLabel')}
           type="email"
           name="email"
           autoComplete="email"
@@ -62,10 +71,10 @@ export default function Login() {
         />
 
         <PasswordInput
-          label="Password"
+          label={t('auth.passwordLabel')}
           name="password"
           autoComplete="current-password"
-          placeholder="Your password"
+          placeholder={t('auth.passwordPlaceholder')}
           value={formData.password}
           onChange={handleChange('password')}
           required
@@ -78,9 +87,9 @@ export default function Login() {
           size="lg"
           className="w-full"
           loading={loading}
-          loadingLabel="Signing in"
+          loadingLabel={t('auth.signingIn')}
         >
-          Sign in
+          {t('auth.signIn')}
         </Button>
       </form>
     </AuthShell>

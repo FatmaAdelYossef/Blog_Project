@@ -57,3 +57,6 @@ jobs:
 
       - name: Build
         run: dotnet build BlogBack/BlogBack.sln --configuration Release
+
+      - name: Test
+        run: dotnet test BlogBack/BlogBack.sln --configuration Release --no-build

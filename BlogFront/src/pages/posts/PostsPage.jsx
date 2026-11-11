@@ -7,6 +7,7 @@ import { postService } from '../../services/postService';
 import { categoryService } from '../../services/categoryService';
 import { ROUTES } from '../../config/routes';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n';
 import {
   Alert,
   Badge,
@@ -30,6 +31,7 @@ const withoutMedia = ({ medias: _medias, ...post }) => post;
 
 export default function PostsPage() {
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const [posts, setPosts] = useState([]);
@@ -57,6 +59,21 @@ export default function PostsPage() {
 
   const requestIdRef = useRef(0);
   const editorContainerRef = useRef(null);
+
+  // Live search: debounce the input and push it into the query so results
+  // update as the user types, without requiring Enter or the Search button.
+  useEffect(() => {
+    const trimmed = searchInput.trim();
+    const timer = setTimeout(() => {
+      setQuery((current) =>
+        current.title === trimmed && current.page === 1
+          ? current
+          : { ...current, page: 1, title: trimmed },
+      );
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     if (!isCreateOpen) return undefined;
@@ -95,7 +112,7 @@ export default function PostsPage() {
         setNewCategoryId((current) => current || (nextCategories[0]?.id ? String(nextCategories[0].id) : ''));
       } catch {
         if (!cancelled) {
-          setCategoriesError('Could not load categories. Filtering and post creation may be limited.');
+          setCategoriesError(t('posts.categoriesError'));
         }
       }
     };
@@ -105,7 +122,7 @@ export default function PostsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const requestId = requestIdRef.current + 1;
@@ -138,7 +155,7 @@ export default function PostsPage() {
         setPosts([]);
         setTotalPages(1);
         setTotalCount(0);
-        setError('Could not load posts. Please try again.');
+        setError(t('posts.loadError'));
       } finally {
         if (!cancelled && requestId === requestIdRef.current) {
           setLoading(false);
@@ -151,7 +168,7 @@ export default function PostsPage() {
     return () => {
       cancelled = true;
     };
-  }, [query, reloadToken]);
+  }, [query, reloadToken, t]);
 
   const hasActiveFilters = Boolean(query.categoryId || query.title);
 
@@ -196,7 +213,7 @@ export default function PostsPage() {
     const content = newContent.trim();
 
     if (!title || !content || !newCategoryId) {
-      setCreateError('Title, content and category are required.');
+      setCreateError(t('posts.createRequired'));
       return;
     }
 
@@ -215,7 +232,7 @@ export default function PostsPage() {
       setNewContent('');
       setQuery((current) => ({ ...current, page: 1 }));
     } catch {
-      setCreateError('Could not create the post. Please try again.');
+      setCreateError(t('posts.createError'));
     } finally {
       setSaving(false);
     }
@@ -231,7 +248,7 @@ export default function PostsPage() {
       await postService.deletePost(postToDelete.id);
       setReloadToken((token) => token + 1);
     } catch {
-      setError('Could not delete the post. Please try again.');
+      setError(t('posts.deleteError'));
     } finally {
       setDeleting(false);
       setPostToDelete(null);
@@ -241,24 +258,26 @@ export default function PostsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Archive"
-        title="Posts"
+        eyebrow={t('posts.eyebrow')}
+        title={t('posts.title')}
         description={
           hasActiveFilters
-            ? `Showing ${totalCount} ${totalCount === 1 ? 'post' : 'posts'} matching your filters.`
-            : 'Read the archive, search by title, and manage your writing.'
+            ? t(query.title || query.categoryId ? 'posts.descFiltered' : 'posts.descFilteredOne', {
+                count: totalCount,
+              })
+            : t('posts.desc')
         }
         actions={
           <>
             {!loading ? (
               <Badge variant="neutral">
-                {totalCount} {totalCount === 1 ? 'post' : 'posts'}
+                {t(totalCount === 1 ? 'posts.countOne' : 'posts.count', { count: totalCount })}
               </Badge>
             ) : null}
 
             {isAuthenticated ? (
               <Button icon={<Plus />} onClick={openCreateDialog}>
-                New post
+                {t('posts.newPost')}
               </Button>
             ) : (
               <Button
@@ -266,7 +285,7 @@ export default function PostsPage() {
                 icon={<LogIn />}
                 onClick={() => navigate(ROUTES.LOGIN)}
               >
-                Sign in to write
+                {t('posts.signInToWrite')}
               </Button>
             )}
           </>
@@ -282,20 +301,20 @@ export default function PostsPage() {
       <Card padding="sm">
         <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <Input
-            label="Search by title"
+            label={t('posts.searchLabel')}
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="Search posts by title…"
+            placeholder={t('posts.searchPlaceholder')}
             className="sm:flex-1"
           />
 
           <Select
-            label="Filter by category"
+            label={t('posts.filterLabel')}
             value={query.categoryId}
             onChange={handleCategoryFilter}
             className="sm:w-56"
           >
-            <option value="">All categories</option>
+            <option value="">{t('posts.allCategories')}</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -310,7 +329,7 @@ export default function PostsPage() {
               icon={<Search />}
               className="flex-1 sm:flex-none"
             >
-              Search
+              {t('posts.search')}
             </Button>
 
             {hasActiveFilters ? (
@@ -319,7 +338,7 @@ export default function PostsPage() {
                 onClick={handleClearFilters}
                 className="flex-1 sm:flex-none"
               >
-                Clear
+                {t('posts.clear')}
               </Button>
             ) : null}
           </div>
@@ -338,22 +357,18 @@ export default function PostsPage() {
             <Skeleton key={index} variant="card" />
           ))}
           <span className="sr-only" role="status">
-            Loading posts…
+            {t('posts.loading')}
           </span>
         </div>
       ) : posts.length === 0 ? (
         error ? null : (
           <EmptyState
-            title="No posts found"
-            description={
-              hasActiveFilters
-                ? 'Try a different search term or category.'
-                : 'There are no posts to read yet.'
-            }
+            title={t('posts.emptyTitle')}
+            description={hasActiveFilters ? t('posts.emptyFiltered') : t('posts.emptyDesc')}
             action={
               hasActiveFilters ? (
                 <Button variant="secondary" onClick={handleClearFilters}>
-                  Clear filters
+                  {t('posts.clearFilters')}
                 </Button>
               ) : null
             }
@@ -378,7 +393,7 @@ export default function PostsPage() {
         <div className="space-y-2 pt-2">
           <Pagination page={query.page} totalPages={totalPages} onPageChange={handlePageChange} />
           <p className="sr-only" role="status">
-            Page {query.page} of {totalPages}
+            {t('posts.pageStatus', { page: query.page, total: totalPages })}
           </p>
         </div>
       ) : null}
@@ -386,16 +401,16 @@ export default function PostsPage() {
       <Modal
         open={isCreateOpen}
         onClose={closeCreateDialog}
-        title="New post"
+        title={t('posts.createTitle')}
         size="lg"
         closeDisabled={saving}
         footer={
           <>
             <Button variant="secondary" onClick={closeCreateDialog} disabled={saving}>
-              Cancel
+              {t('posts.createCancel')}
             </Button>
             <Button type="submit" form="create-post-form" loading={saving}>
-              Create post
+              {t('posts.createSubmit')}
             </Button>
           </>
         }
@@ -404,9 +419,9 @@ export default function PostsPage() {
           {createError ? <Alert variant="danger">{createError}</Alert> : null}
 
           <Select
-            label="Category"
+            label={t('posts.createCategory')}
             required
-            placeholder="Select a category"
+            placeholder={t('posts.createSelectCategory')}
             value={newCategoryId}
             onChange={(event) => setNewCategoryId(event.target.value)}
           >
@@ -418,20 +433,20 @@ export default function PostsPage() {
           </Select>
 
           <Input
-            label="Title"
+            label={t('posts.createPostTitle')}
             required
-            placeholder="Enter post title…"
+            placeholder={t('posts.createPostTitlePlaceholder')}
             value={newTitle}
             onChange={(event) => setNewTitle(event.target.value)}
           />
 
           <fieldset className="flex min-w-0 flex-col gap-1.5">
             <legend className="text-sm font-medium text-ink">
-              Content
+              {t('posts.createContent')}
               <span aria-hidden="true" className="ml-0.5 text-danger">
                 *
               </span>
-              <span className="sr-only"> (required)</span>
+              <span className="sr-only"> ({t('post.required')})</span>
             </legend>
             <div
               ref={editorContainerRef}
@@ -445,13 +460,13 @@ export default function PostsPage() {
 
       <ConfirmDialog
         open={Boolean(postToDelete)}
-        title="Delete this post?"
+        title={t('posts.deleteTitle')}
         description={
           postToDelete
-            ? `"${postToDelete.title}" will be permanently deleted. This action cannot be undone.`
+            ? t('posts.deleteDesc', { title: postToDelete.title })
             : undefined
         }
-        confirmLabel="Delete"
+        confirmLabel={t('posts.deleteConfirm')}
         loading={deleting}
         onCancel={() => setPostToDelete(null)}
         onConfirm={handleConfirmDelete}

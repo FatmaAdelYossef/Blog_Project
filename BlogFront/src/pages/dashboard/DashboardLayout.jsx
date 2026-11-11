@@ -12,26 +12,29 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n';
 import { ROUTES } from '../../config/routes';
+import { applySeo } from '../../lib/seo';
 import { Avatar, Badge, Button, IconButton } from '../../components/ui';
 import { Brand } from '../../components/layout/Brand';
+import { LanguageToggle } from '../../components/layout/LanguageToggle';
 import { ThemeToggle } from '../../components/layout/ThemeToggle';
 import { cn } from '../../lib/cn';
 import { getFocusableElements } from '../../lib/focusable';
 
-const NAV_ITEMS = [
-  { to: ROUTES.HOME, label: 'Overview', icon: LayoutDashboard, end: true },
-  { to: ROUTES.POSTS, label: 'Posts', icon: FileText },
-  { to: ROUTES.CATEGORIES, label: 'Categories', icon: FolderOpen },
+const NAV_KEYS = [
+  { to: ROUTES.HOME, labelKey: 'nav.overview', icon: LayoutDashboard, end: true },
+  { to: ROUTES.POSTS, labelKey: 'nav.posts', icon: FileText },
+  { to: ROUTES.CATEGORIES, labelKey: 'nav.categories', icon: FolderOpen },
 ];
 
-const getPageTitle = (pathname) => {
-  if (pathname === ROUTES.HOME) return 'Overview';
-  if (pathname.startsWith(`${ROUTES.POSTS}/`)) return 'Post';
-  if (pathname.startsWith(ROUTES.POSTS)) return 'Posts';
-  if (pathname.startsWith(ROUTES.CATEGORIES)) return 'Categories';
-  if (pathname.startsWith(ROUTES.CHANGE_PASSWORD)) return 'Change password';
-  return 'My Blog';
+const getPageTitle = (pathname, t) => {
+  if (pathname === ROUTES.HOME) return t('nav.overview');
+  if (pathname.startsWith(`${ROUTES.POSTS}/`)) return t('page.post');
+  if (pathname.startsWith(ROUTES.POSTS)) return t('page.posts');
+  if (pathname.startsWith(ROUTES.CATEGORIES)) return t('page.categories');
+  if (pathname.startsWith(ROUTES.CHANGE_PASSWORD)) return t('auth.changePassword');
+  return t('app.name');
 };
 
 const navLinkClass = ({ isActive }) =>
@@ -42,7 +45,7 @@ const navLinkClass = ({ isActive }) =>
       : 'text-ink-muted hover:bg-surface-muted hover:text-ink',
   );
 
-function SidebarContent({ onNavigate }) {
+function SidebarContent({ onNavigate, t }) {
   const { isAuthenticated, user } = useAuth();
 
   return (
@@ -51,12 +54,12 @@ function SidebarContent({ onNavigate }) {
 
       <nav aria-label="Main navigation" className="flex flex-col gap-1">
         <p className="px-3 pb-2 font-mono text-2xs font-medium uppercase tracking-[0.18em] text-ink-muted">
-          Workspace
+          {t('nav.workspace')}
         </p>
-        {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+        {NAV_KEYS.map(({ to, labelKey, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} onClick={onNavigate} className={navLinkClass}>
             <Icon aria-hidden="true" className="size-4" />
-            {label}
+            {t(labelKey)}
           </NavLink>
         ))}
       </nav>
@@ -80,16 +83,16 @@ function SidebarContent({ onNavigate }) {
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-line p-4">
-            <p className="text-sm font-medium text-ink">Reading as a guest</p>
+            <p className="text-sm font-medium text-ink">{t('auth.readingAsGuest')}</p>
             <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-              Sign in to write and manage posts.
+              {t('auth.guestHint')}
             </p>
             <Link
               to={ROUTES.LOGIN}
               onClick={onNavigate}
               className="mt-3 inline-flex text-sm font-medium text-accent underline-offset-4 hover:underline"
             >
-              Sign in
+              {t('auth.signIn')}
             </Link>
           </div>
         )}
@@ -102,6 +105,7 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
+  const { t } = useLanguage();
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -112,11 +116,20 @@ export default function DashboardLayout() {
   const accountMenuRef = useRef(null);
   const accountButtonRef = useRef(null);
 
-  const pageTitle = getPageTitle(location.pathname);
+  const pageTitle = getPageTitle(location.pathname, t);
+
+  // Post detail pages own their SEO meta (post title, excerpt, JSON-LD);
+  // the layout only provides defaults for the static sections.
+  const isPostDetailsRoute = /^\/posts\/[^/]+$/.test(location.pathname);
 
   useEffect(() => {
-    document.title = `${pageTitle} · My Blog`;
-  }, [pageTitle]);
+    if (isPostDetailsRoute) return undefined;
+    applySeo({
+      title: `${pageTitle} · ${t('app.name')}`,
+      noindex: location.pathname === ROUTES.CHANGE_PASSWORD,
+    });
+    return undefined;
+  }, [pageTitle, isPostDetailsRoute, location.pathname, t]);
 
   // Mobile navigation: lock the page, trap focus, close on Escape, and return
   // focus to the button that opened the drawer.
@@ -221,8 +234,8 @@ export default function DashboardLayout() {
         Skip to content
       </a>
 
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-line bg-surface lg:block">
-        <SidebarContent />
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-e border-line bg-surface lg:block">
+        <SidebarContent t={t} />
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
@@ -230,7 +243,7 @@ export default function DashboardLayout() {
           <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-10">
             <IconButton
               ref={openNavButtonRef}
-              label="Open navigation"
+              label={t('nav.openMenu')}
               icon={<Menu />}
               variant="secondary"
               className="lg:hidden"
@@ -239,14 +252,15 @@ export default function DashboardLayout() {
 
             <div className="min-w-0">
               <p className="font-mono text-2xs font-medium uppercase tracking-[0.18em] text-ink-muted">
-                My Blog
+                {t('app.name')}
               </p>
               <p className="truncate font-serif text-lg font-semibold tracking-tight text-ink">
                 {pageTitle}
               </p>
             </div>
 
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ms-auto flex items-center gap-2">
+              <LanguageToggle />
               <ThemeToggle />
 
               {isAuthenticated ? (
@@ -272,7 +286,7 @@ export default function DashboardLayout() {
                   </button>
 
                   {isAccountMenuOpen ? (
-                    <div className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-lg border border-line bg-surface shadow-soft">
+                    <div className="absolute end-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-lg border border-line bg-surface shadow-soft">
                       <div className="border-b border-line px-4 py-3">
                         <p className="truncate text-sm font-medium text-ink">{user?.email}</p>
                         {user?.role ? (
@@ -289,7 +303,7 @@ export default function DashboardLayout() {
                           className="flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
                         >
                           <KeyRound aria-hidden="true" className="size-4" />
-                          Change password
+                          {t('auth.changePassword')}
                         </button>
                         <button
                           type="button"
@@ -297,7 +311,7 @@ export default function DashboardLayout() {
                           className="flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-danger transition-colors hover:bg-danger/10"
                         >
                           <LogOut aria-hidden="true" className="size-4" />
-                          Sign out
+                          {t('auth.signOut')}
                         </button>
                       </div>
                     </div>
@@ -305,7 +319,7 @@ export default function DashboardLayout() {
                 </div>
               ) : (
                 <Button icon={<LogIn />} onClick={() => navigate(ROUTES.LOGIN)}>
-                  Sign in
+                  {t('auth.signIn')}
                 </Button>
               )}
             </div>
@@ -319,7 +333,7 @@ export default function DashboardLayout() {
         </main>
 
         <footer className="border-t border-line px-4 py-5 text-center text-xs text-ink-muted sm:px-6 lg:px-10">
-          My Blog · A quiet place to write and publish.
+          {t('footer.line1')}
         </footer>
       </div>
 
@@ -327,7 +341,7 @@ export default function DashboardLayout() {
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            aria-label="Close navigation"
+            aria-label={t('nav.closeMenu')}
             tabIndex={-1}
             onClick={closeMobileNav}
             className="absolute inset-0 h-full w-full cursor-default bg-ink/40"
@@ -337,20 +351,20 @@ export default function DashboardLayout() {
             ref={drawerRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Main navigation"
+            aria-label={t('nav.mainNav')}
             tabIndex={-1}
-            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-line bg-surface shadow-soft outline-none"
+            className="absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col border-e border-line bg-surface shadow-soft outline-none"
           >
             <div className="flex justify-end p-3">
               <IconButton
                 ref={closeNavButtonRef}
-                label="Close navigation"
+                label={t('nav.closeMenu')}
                 icon={<X />}
                 onClick={closeMobileNav}
               />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <SidebarContent onNavigate={closeMobileNav} />
+              <SidebarContent onNavigate={closeMobileNav} t={t} />
             </div>
           </aside>
         </div>

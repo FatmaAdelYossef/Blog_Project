@@ -25,8 +25,11 @@ Create two services (any PaaS: Railway / Render / Fly / Cloud Run) plus a manage
 | --- | --- | --- |
 | `PORT` | *(auto by platform)* | Entrypoint binds `http://0.0.0.0:$PORT`. |
 | `ConnectionStrings__Connection1` | managed PG connection string | |
-| `Jwt__Key` | random ≥ 256-bit hex | Keep out of the repo. |
+| `Jwt__Key` | random ≥ 256-bit hex | Keep out of the repo. The API refuses to boot without it. |
 | `Jwt__Issuer` / `Jwt__Audience` | `BlogApi` / `BlogUser` | Defaults. |
+| `Jwt__ExpireDays` | `1` | Access-token lifetime; the SPA refreshes silently. |
+| `Jwt__RefreshTokenExpireDays` | `30` | Refresh-token lifetime; rotates on every use. |
+| `DataProtection__KeyPath` | *(optional)* | Persistent key-ring dir, e.g. a mounted volume. Only needed for multi-instance deploys (Identity reset tokens). |
 | `Frontend__Origin` | `https://<public-domain>` | CORS + reset-password link base. Leave until the domain exists. |
 | `ForwardedHeaders__Enabled` | `true` | The platform terminates TLS in front of the app. |
 | `Seed__DefaultPassword` | *(set only for a fresh install)* | Seeded admin users. Must be ≥ 12 chars with digit/upper/lower. Remove afterwards. |
@@ -37,7 +40,14 @@ Create two services (any PaaS: Railway / Render / Fly / Cloud Run) plus a manage
 | Arg | Value |
 | --- | --- |
 | `VITE_API_BASE_URL` | `/api` (same origin via the nginx proxy) |
-| `VITE_SITE_URL` | `https://<public-domain>` (canonical/OG/sitemap prefix; can be set when the domain lands) |
+| `VITE_SITE_URL` | `https://<public-domain>` (canonical/OG prefix; can be set when the domain lands) |
+
+### SEO endpoints
+
+`GET /robots.txt` and `GET /sitemap.xml` are served by the API and proxied through the frontend
+container root (`nginx/default.conf.template`). Both derive absolute URLs from `Frontend:Origin`,
+so setting that value makes the SEO endpoints, canonical tags, and reset links agree with the
+public domain. Auth and account pages carry `noindex` in the rendered head.
 
 ### Frontend runtime env
 
@@ -62,6 +72,8 @@ curl http://localhost:5219/health                                   # API + DB
 curl http://localhost:8081/healthz                                  # nginx
 curl http://localhost:8081/api/Posts?pageNumber=1                   # proxy
 curl -o /dev/null -w '%{http_code}\n' http://localhost:8081/posts/1 # SPA fallback
+curl http://localhost:8081/robots.txt                               # crawl rules
+curl http://localhost:8081/sitemap.xml                              # SEO urls
 ```
 
 ## When the domain arrives
@@ -73,9 +85,14 @@ curl -o /dev/null -w '%{http_code}\n' http://localhost:8081/posts/1 # SPA fallba
 
 ## Notes
 
-- ASP.NET DataProtection keys live under `/home/app/.aspnet/DataProtection-Keys` inside the API
-  container. They matter only for Identity reset/change tokens; the JWT auth layer is stateless.
-  If restarts should not invalidate outstanding reset emails, mount a small volume on that path.
+- ASP.NET DataProtection keys protect Identity reset/change tokens. By default they live under
+  `/home/app/.aspnet/DataProtection-Keys` inside the API container and are lost on redeploy —
+  outstanding reset emails then fail. For a single instance this is acceptable; for zero-downtime
+  or multi-instance deploys set `DataProtection__KeyPath` to a mounted volume.
+- **Uploaded images are stored on the container filesystem** (`wwwroot/images`) and do not
+  survive redeploys or scale horizontally. For production durability, either attach a persistent
+  volume (single instance) or move uploads to object storage — track this before launch.
 - The startup `MigrationService` runs pending EF migrations and seeders before the server accepts
   traffic, so a fresh database self-initializes.
+- Rate limits: auth endpoints 5 req/min per IP; image uploads 20 req/min per user.
 - All images are Alpine; do not replace them with non-Alpine bases when updating versions.

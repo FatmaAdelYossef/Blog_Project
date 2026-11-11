@@ -9,9 +9,12 @@ Provide values through environment variables or the .NET Secret Manager (user-se
 
 | Configuration key | Environment variable | Notes |
 | --- | --- | --- |
-| `Jwt:Key` | `Jwt__Key` | JWT signing key. Use a random value of at least 256 bits (32 bytes). |
+| `Jwt:Key` | `Jwt__Key` | JWT signing key. Use a random value of at least 256 bits (32 bytes). The app refuses to start with a missing or shorter key. |
 | `Jwt:Issuer` | `Jwt__Issuer` | Defaults to `BlogApi` in `appsettings.json`. |
 | `Jwt:Audience` | `Jwt__Audience` | Defaults to `BlogUser` in `appsettings.json`. |
+| `Jwt:ExpireDays` | `Jwt__ExpireDays` | Access-token lifetime in days. Defaults to `1`; the SPA refreshes silently via refresh tokens. |
+| `Jwt:RefreshTokenExpireDays` | `Jwt__RefreshTokenExpireDays` | Refresh-token lifetime in days. Defaults to `30`; tokens rotate on every use. |
+| `DataProtection:KeyPath` | `DataProtection__KeyPath` | Optional directory for a persistent ASP.NET DataProtection key ring. Only needed when more than one instance must decrypt Identity tokens (e.g. password-reset links). On a single instance the ephemeral default is fine. |
 | `EmailSettings:Password` | `EmailSettings__Password` | SMTP password or app-specific password. |
 | `EmailSettings:SenderEmail` | `EmailSettings__SenderEmail` | SMTP account / From address. |
 | `ConnectionStrings:Connection1` | `ConnectionStrings__Connection1` | PostgreSQL connection string, for example `Host=localhost;Port=5432;Database=blog;Username=blog;Password=...`. |
@@ -35,6 +38,9 @@ Then set the values:
 
 ```bash
 dotnet user-secrets set "Jwt:Key" "<random-256-bit-key>" --project BlogBack/Blog/Blog.csproj
+# Optional overrides (defaults shown):
+dotnet user-secrets set "Jwt:ExpireDays" "1" --project BlogBack/Blog/Blog.csproj
+dotnet user-secrets set "Jwt:RefreshTokenExpireDays" "30" --project BlogBack/Blog/Blog.csproj
 dotnet user-secrets set "Jwt:Issuer" "BlogApi" --project BlogBack/Blog/Blog.csproj
 dotnet user-secrets set "Jwt:Audience" "BlogUser" --project BlogBack/Blog/Blog.csproj
 dotnet user-secrets set "EmailSettings:SenderEmail" "<smtp-account>" --project BlogBack/Blog/Blog.csproj

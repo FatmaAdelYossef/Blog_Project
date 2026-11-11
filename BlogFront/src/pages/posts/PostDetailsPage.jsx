@@ -7,8 +7,10 @@ import { postService } from '../../services/postService';
 import { uploadService } from '../../services/uploadService';
 import { categoryService } from '../../services/categoryService';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../i18n';
 import { sanitizeHtml } from '../../lib/sanitize';
-import { formatReadingTime, getReadingTime } from '../../lib/readingTime';
+import { applySeo, excerptFromHtml, siteUrl } from '../../lib/seo';
+import { getReadingTime } from '../../lib/readingTime';
 import { PageHeader } from '../../components/PageHeader';
 import {
   Alert,
@@ -27,10 +29,10 @@ import {
 } from '../../components/ui';
 
 const TABS = [
-  { value: 'details', label: 'Details', singular: 'detail' },
-  { value: 'Image', label: 'Images', singular: 'image' },
-  { value: 'Music', label: 'Music', singular: 'track' },
-  { value: 'Link', label: 'Links', singular: 'link' },
+  { value: 'details', labelKey: 'post.tabDetails' },
+  { value: 'Image', labelKey: 'post.tabImages', singularKey: 'post.singular.image' },
+  { value: 'Music', labelKey: 'post.tabMusic', singularKey: 'post.singular.music' },
+  { value: 'Link', labelKey: 'post.tabLinks', singularKey: 'post.singular.link' },
 ];
 
 const MEDIA_TABS = TABS.filter((tab) => tab.value !== 'details');
@@ -55,6 +57,7 @@ export default function PostDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -109,6 +112,29 @@ export default function PostDetailsPage() {
     load();
   }, [loadPost]);
 
+  // SEO + social preview for the post itself (layout skips this route).
+  useEffect(() => {
+    if (!post) return;
+
+    const firstImage = (post.medias ?? []).find((media) => media.mediaType === 'Image');
+    applySeo({
+      title: `${post.title} · My Blog`,
+      description: excerptFromHtml(post.content ?? ''),
+      canonical: siteUrl(`/posts/${post.id}`),
+      image: firstImage?.url ?? '',
+      type: 'article',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'BlogPosting',
+        headline: post.title,
+        description: excerptFromHtml(post.content ?? ''),
+        datePublished: post.createdAt,
+        inLanguage: 'en',
+        mainEntityOfPage: siteUrl(`/posts/${post.id}`) || undefined,
+      },
+    });
+  }, [post]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -121,7 +147,7 @@ export default function PostDetailsPage() {
         setCategories(Array.isArray(list) ? list : []);
       } catch {
         if (!cancelled) {
-          setCategoriesError('Could not load categories. The category selector may be incomplete.');
+          setCategoriesError(t('posts.categoriesError'));
         }
       }
     };
@@ -131,7 +157,7 @@ export default function PostDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!isEditing) return;
@@ -192,7 +218,7 @@ export default function PostDetailsPage() {
     const nextContent = content.trim();
 
     if (!nextTitle || !nextContent) {
-      setActionError('Title and content are required.');
+      setActionError(t('post.titleRequired'));
       return;
     }
 
@@ -209,7 +235,7 @@ export default function PostDetailsPage() {
       setIsEditing(false);
       await loadPost();
     } catch {
-      setActionError('Could not save the post. Please try again.');
+      setActionError(t('post.saveError'));
     } finally {
       setSaving(false);
     }
@@ -225,13 +251,13 @@ export default function PostDetailsPage() {
     if (!isAuthenticated) return;
 
     if (mediaType === 'Image' && newFiles.length === 0) {
-      setActionError('Choose at least one image to upload.');
+      setActionError(t('post.chooseImageError'));
       return;
     }
 
     const textUrl = newTextUrl.trim();
     if (mediaType !== 'Image' && !textUrl) {
-      setActionError('Enter a URL first.');
+      setActionError(t('post.enterUrlError'));
       return;
     }
 
@@ -257,7 +283,7 @@ export default function PostDetailsPage() {
 
       await loadPost();
     } catch {
-      setActionError('Could not add the media item. Please try again.');
+      setActionError(t('post.addMediaError'));
     } finally {
       setSaving(false);
     }
@@ -268,7 +294,7 @@ export default function PostDetailsPage() {
 
     const nextUrl = editTextUrl.trim();
     if (!nextUrl) {
-      setActionError('Enter a URL first.');
+      setActionError(t('post.enterUrlError'));
       return;
     }
 
@@ -281,7 +307,7 @@ export default function PostDetailsPage() {
       setEditTextUrl('');
       await loadPost();
     } catch {
-      setActionError('Could not update the media item. Please try again.');
+      setActionError(t('post.updateMediaError'));
     } finally {
       setSaving(false);
     }
@@ -297,7 +323,7 @@ export default function PostDetailsPage() {
       await postService.deleteMedia(mediaToDelete.id);
       await loadPost();
     } catch {
-      setActionError('Could not delete the media item. Please try again.');
+      setActionError(t('post.deleteMediaError'));
     } finally {
       setSaving(false);
       setMediaToDelete(null);
@@ -307,7 +333,7 @@ export default function PostDetailsPage() {
   if (loading && !post) {
     return (
       <div className="flex min-h-64 items-center justify-center" aria-busy="true">
-        <Spinner size="lg" label="Loading post details…" />
+        <Spinner size="lg" label={t('post.loading')} />
       </div>
     );
   }
@@ -316,20 +342,20 @@ export default function PostDetailsPage() {
     return (
       <EmptyState
         icon={<FileQuestion />}
-        title={loadError ? 'Could not load this post' : 'Post not found'}
-        description={loadError || 'The post you are looking for does not exist or was removed.'}
+        title={loadError ? t('post.loadError') : t('post.notFound')}
+        description={loadError || t('post.notFoundDesc')}
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <Button
               variant="secondary"
-              icon={<ArrowLeft />}
+              icon={<ArrowLeft className="rtl:-scale-x-100" />}
               onClick={() => navigate('/posts')}
             >
-              Back to posts
+              {t('post.backToPosts')}
             </Button>
             {loadError ? (
               <Button onClick={loadPost} loading={loading}>
-                Try again
+                {t('post.tryAgain')}
               </Button>
             ) : null}
           </div>
@@ -339,8 +365,13 @@ export default function PostDetailsPage() {
   }
 
   const publishedAt = formatDate(post.createdAt);
-  const readingTime = formatReadingTime(getReadingTime(post.content));
+  const readingMinutes = getReadingTime(post.content);
+  const readingTime = readingMinutes
+    ? t('post.minRead', { minutes: readingMinutes })
+    : '';
   const mediaToDeleteTab = MEDIA_TABS.find((tab) => tab.value === mediaToDelete?.mediaType);
+  const tabLabel = (tab) => t(tab.labelKey);
+  const tabSingular = (tab) => (tab.singularKey ? t(tab.singularKey) : '');
 
   const renderMediaList = (tab) => {
     const medias = getMedias(tab.value);
@@ -349,8 +380,8 @@ export default function PostDetailsPage() {
       return (
         <EmptyState
           icon={MEDIA_ICONS[tab.value]}
-          title={`No ${tab.label.toLowerCase()} yet`}
-          description={`This post does not have any ${tab.label.toLowerCase()} attached.`}
+          title={t('post.noMediaTitle', { label: tabLabel(tab) })}
+          description={t('post.noMedia', { label: tabLabel(tab) })}
         />
       );
     }
@@ -363,7 +394,7 @@ export default function PostDetailsPage() {
               {tab.value === 'Image' ? (
                 <img
                   src={media.url}
-                  alt={`${post.title} image ${index + 1}`}
+                  alt={t('post.imageAlt', { title: post.title, index: index + 1 })}
                   loading="lazy"
                   className="h-40 w-full rounded-md border border-line object-cover"
                 />
@@ -374,7 +405,7 @@ export default function PostDetailsPage() {
                   rel="noreferrer"
                   className="flex items-start gap-2 break-all text-sm text-accent underline-offset-4 hover:underline"
                 >
-                  <ExternalLink aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                  <ExternalLink aria-hidden="true" className="mt-0.5 size-4 shrink-0 rtl:-scale-x-100" />
                   <span>{media.url}</span>
                 </a>
               )}
@@ -392,12 +423,12 @@ export default function PostDetailsPage() {
       <div className="flex flex-col gap-8">
         <section className="space-y-3">
           <h3 className="text-sm font-medium text-ink">
-            Current {tab.label.toLowerCase()}
+            {t('post.currentMedia', { label: tabLabel(tab) })}
           </h3>
 
           {medias.length === 0 ? (
             <p className="text-sm text-ink-muted">
-              Nothing attached yet. Add the first {tab.singular} below.
+              {t('post.nothingYet', { singular: tabSingular(tab) })}
             </p>
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -408,13 +439,13 @@ export default function PostDetailsPage() {
                       {tab.value === 'Image' ? (
                         <img
                           src={media.url}
-                          alt={`${post.title} image ${index + 1}`}
+                          alt={t('post.imageAlt', { title: post.title, index: index + 1 })}
                           loading="lazy"
                           className="h-36 w-full rounded-md border border-line object-cover"
                         />
                       ) : editingMediaId === media.id ? (
                         <Input
-                          aria-label={`Edit ${tab.singular} URL`}
+                          aria-label={t('post.editMediaUrl', { singular: tabSingular(tab) })}
                           value={editTextUrl}
                           onChange={(event) => setEditTextUrl(event.target.value)}
                           placeholder="https://…"
@@ -430,7 +461,7 @@ export default function PostDetailsPage() {
                             loading={saving}
                             onClick={() => handleUpdateMediaItem(media.id, tab.value)}
                           >
-                            Save
+                            {t('post.save')}
                           </Button>
                           <Button
                             size="sm"
@@ -441,7 +472,7 @@ export default function PostDetailsPage() {
                               setEditTextUrl('');
                             }}
                           >
-                            Cancel
+                            {t('post.cancel')}
                           </Button>
                         </div>
                       ) : (
@@ -451,13 +482,13 @@ export default function PostDetailsPage() {
                               size="sm"
                               variant="secondary"
                               icon={<Pencil />}
-                              aria-label={`Edit ${tab.singular} URL`}
+                              aria-label={t('post.editMediaUrl', { singular: tabSingular(tab) })}
                               onClick={() => {
                                 setEditingMediaId(media.id);
                                 setEditTextUrl(media.url);
                               }}
                             >
-                              Edit URL
+                              {t('post.editUrl')}
                             </Button>
                           ) : null}
 
@@ -465,10 +496,13 @@ export default function PostDetailsPage() {
                             size="sm"
                             variant="danger"
                             icon={<Trash2 />}
-                            aria-label={`Delete ${tab.singular} ${index + 1}`}
+                            aria-label={t('post.deleteSingular', {
+                              singular: tabSingular(tab),
+                              index: index + 1,
+                            })}
                             onClick={() => setMediaToDelete(media)}
                           >
-                            Delete
+                            {t('posts.deleteConfirm')}
                           </Button>
                         </div>
                       )}
@@ -482,14 +516,16 @@ export default function PostDetailsPage() {
 
         <section className="space-y-3" aria-labelledby={`add-${tab.value}-heading`}>
           <h3 id={`add-${tab.value}-heading`} className="text-sm font-medium text-ink">
-            {tab.value === 'Image' ? 'Add images' : `Add a ${tab.singular} URL`}
+            {tab.value === 'Image'
+              ? t('post.addImages')
+              : t('post.addUrl', { singular: tabSingular(tab) })}
           </h3>
 
           {tab.value === 'Image' ? (
             <div className="flex flex-col gap-4 rounded-lg border border-dashed border-line bg-surface-muted p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <label htmlFor="new-media-files" className="text-sm font-medium text-ink">
-                  Choose images
+                  {t('post.chooseImages')}
                 </label>
                 <input
                   id="new-media-files"
@@ -500,9 +536,7 @@ export default function PostDetailsPage() {
                   onChange={handleFileChange}
                   className="mt-2 block w-full text-sm text-ink-muted file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:text-sm file:font-medium file:text-surface hover:file:bg-accent-hover"
                 />
-                <p className="mt-1 text-xs text-ink-muted">
-                  Select one or more images to upload to this post.
-                </p>
+                <p className="mt-1 text-xs text-ink-muted">{t('post.chooseImagesHint')}</p>
               </div>
 
               <Button
@@ -511,13 +545,13 @@ export default function PostDetailsPage() {
                 disabled={newFiles.length === 0}
                 onClick={() => handleAddMedia(tab.value)}
               >
-                Upload and add
+                {t('post.uploadAndAdd')}
               </Button>
             </div>
           ) : (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <Input
-                label={`${tab.label} URL`}
+                label={t('post.mediaUrl', { label: tabLabel(tab) })}
                 value={newTextUrl}
                 onChange={(event) => setNewTextUrl(event.target.value)}
                 placeholder="https://…"
@@ -528,7 +562,7 @@ export default function PostDetailsPage() {
                 loading={saving}
                 onClick={() => handleAddMedia(tab.value)}
               >
-                Add {tab.singular}
+                {t('post.addSingular', { singular: tabSingular(tab) })}
               </Button>
             </div>
           )}
@@ -541,7 +575,7 @@ export default function PostDetailsPage() {
     <article className="space-y-5">
       <div className="flex flex-wrap items-center gap-3 text-xs text-ink-muted">
         {publishedAt ? (
-          <time dateTime={post.createdAt}>Published {publishedAt}</time>
+          <time dateTime={post.createdAt}>{t('post.published', { date: publishedAt })}</time>
         ) : null}
         {post.categoryName ? <Badge variant="accent">{post.categoryName}</Badge> : null}
         {readingTime ? (
@@ -560,7 +594,7 @@ export default function PostDetailsPage() {
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
         />
       ) : (
-        <p className="text-sm text-ink-muted">This post has no content yet.</p>
+        <p className="text-sm text-ink-muted">{t('post.noContent')}</p>
       )}
     </article>
   );
@@ -568,19 +602,19 @@ export default function PostDetailsPage() {
   const renderDetailsEditor = () => (
     <form onSubmit={handleUpdatePost} className="flex flex-col gap-5" noValidate>
       <Input
-        label="Title"
+        label={t('posts.createPostTitle')}
         required
         value={title}
         onChange={(event) => setTitle(event.target.value)}
-        placeholder="Enter post title…"
+        placeholder={t('posts.createPostTitlePlaceholder')}
       />
 
       <Select
-        label="Category"
+        label={t('posts.createCategory')}
         value={categoryId}
         onChange={(event) => setCategoryId(event.target.value)}
       >
-        <option value="">No category</option>
+        <option value="">{t('post.noCategory')}</option>
         {categories.map((category) => (
           <option key={category.id} value={category.id}>
             {category.name}
@@ -590,11 +624,11 @@ export default function PostDetailsPage() {
 
       <fieldset className="flex min-w-0 flex-col gap-1.5">
         <legend className="text-sm font-medium text-ink">
-          Content
+          {t('posts.createContent')}
           <span aria-hidden="true" className="ml-0.5 text-danger">
             *
           </span>
-          <span className="sr-only"> (required)</span>
+          <span className="sr-only"> ({t('post.required')})</span>
         </legend>
         <div
           ref={editorContainerRef}
@@ -605,8 +639,8 @@ export default function PostDetailsPage() {
       </fieldset>
 
       <div>
-        <Button type="submit" loading={saving} loadingLabel="Saving">
-          Save changes
+        <Button type="submit" loading={saving} loadingLabel={t('post.saving')}>
+          {t('post.saveChanges')}
         </Button>
       </div>
     </form>
@@ -615,13 +649,19 @@ export default function PostDetailsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={isEditing ? 'Editing post' : 'Post'}
+        eyebrow={isEditing ? t('post.editing') : t('page.post')}
         title={post.title}
-        description={post.categoryName ? `Filed under ${post.categoryName}` : undefined}
+        description={
+          post.categoryName ? t('post.filedUnder', { category: post.categoryName }) : undefined
+        }
         actions={
           <>
-            <Button variant="secondary" icon={<ArrowLeft />} onClick={() => navigate(-1)}>
-              Back
+            <Button
+              variant="secondary"
+              icon={<ArrowLeft className="rtl:-scale-x-100" />}
+              onClick={() => navigate(-1)}
+            >
+              {t('post.back')}
             </Button>
 
             {isAuthenticated && !isEditing ? (
@@ -632,7 +672,7 @@ export default function PostDetailsPage() {
                   setIsEditing(true);
                 }}
               >
-                Edit post
+                {t('post.editPost')}
               </Button>
             ) : null}
           </>
@@ -653,10 +693,10 @@ export default function PostDetailsPage() {
 
       <Card padding="md" aria-busy={loading || undefined}>
         <Tabs value={activeTab} onChange={handleTabChange}>
-          <TabsList aria-label="Post content">
+          <TabsList aria-label={t('posts.createContent')}>
             {TABS.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value}>
-                {tab.label}
+                {t(tab.labelKey)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -675,7 +715,7 @@ export default function PostDetailsPage() {
         {isEditing ? (
           <div className="mt-6 border-t border-line pt-5">
             <Button variant="secondary" onClick={closeEditMode} disabled={saving}>
-              Close edit mode
+              {t('post.closeEdit')}
             </Button>
           </div>
         ) : null}
@@ -683,9 +723,11 @@ export default function PostDetailsPage() {
 
       <ConfirmDialog
         open={Boolean(mediaToDelete)}
-        title={`Remove this ${mediaToDeleteTab?.singular ?? 'media item'}?`}
-        description="It will be detached from this post. This action cannot be undone."
-        confirmLabel="Remove"
+        title={t('post.removeMediaTitle', {
+          singular: mediaToDeleteTab ? tabSingular(mediaToDeleteTab) : '',
+        })}
+        description={t('post.removeMediaDesc')}
+        confirmLabel={t('post.removeConfirm')}
         loading={saving}
         onCancel={() => setMediaToDelete(null)}
         onConfirm={handleConfirmDeleteMedia}
